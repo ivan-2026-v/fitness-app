@@ -53,6 +53,13 @@
     text-decoration:none; background:rgba(60,166,255,.12); border:1px solid rgba(60,166,255,.3);
     padding:5px 10px; border-radius:20px; margin-top:7px; font-weight:600;}
   a.demo:active{opacity:.6;}
+  a.demo.sm{padding:4px 9px; margin:0;}
+  .moves{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px;}
+  .moves-lbl{font-size:12px; color:var(--muted); font-weight:600; margin-right:2px;}
+  .autosave-note{background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:9px 12px; margin-bottom:12px;}
+  .asave{position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-8px); background:var(--green); color:#04120a;
+    padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; z-index:40; opacity:0; transition:.2s; pointer-events:none;}
+  .asave.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
   .sets{margin-top:10px; display:flex; flex-direction:column; gap:7px;}
   .setrow{display:flex; align-items:center; gap:8px;}
@@ -134,7 +141,8 @@
 <!-- ================= AJUSTES ================= -->
 <div class="wrap hide" id="view-set"></div>
 
-<div class="save-bar hide" id="saveBar"><button onclick="saveSession()">Guardar sesión ✓</button></div>
+<div class="save-bar hide" id="saveBar"><button id="saveBtn" onclick="saveSession()">Guardar sesión ✓</button></div>
+<div class="asave" id="asave">💾 Guardado</div>
 <div class="toast" id="toast"></div>
 
 <nav class="tabs">
@@ -167,6 +175,7 @@ const PROGRAM = [
       {kind:"met", title:"Bloque 2 · Metcon", ex:[
         {id:"m1", name:"4 rounds FOR TIME", scheme:"~14'", log:"metcon",
          desc:"500 m bici\n12 goblet squats (24 kg)\n16 walking lunges (2×10 kg)",
+         moves:[{label:"Goblet squat",q:"goblet squat"},{label:"Walking lunge",q:"walking lunge dumbbell"}],
          coach:"Sin carga en columna: piernas + motor. La bici está lejos de la barra, no pasa nada."}
       ]},
       {kind:"acc", title:"Bloque 3 · Core & Movilidad", ex:[
@@ -186,7 +195,8 @@ const PROGRAM = [
       ]},
       {kind:"met", title:"Bloque 2 · Metcon", ex:[
         {id:"m2", name:"21-15-9 FOR TIME", scheme:"~12'", log:"metcon",
-         desc:"Push-ups\nDB push press (2×15 kg)\n+ 200 m carrera o bici entre rounds"}
+         desc:"Push-ups\nDB push press (2×15 kg)\n+ 200 m carrera o bici entre rounds",
+         moves:[{label:"Push-up",q:"push up"},{label:"DB push press",q:"dumbbell push press"}]}
       ]},
       {kind:"acc", title:"Bloque 3 · Tríceps & Prehab hombro", ex:[
         {id:"dips", name:"Dips asistidos / Tríceps extensión", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
@@ -209,6 +219,7 @@ const PROGRAM = [
       {kind:"met", title:"Bloque 2 · Metcon (gimnásticos)", ex:[
         {id:"m3", name:"EMOM 18 (rotar A/B/C)", scheme:"18'", log:"metcon",
          desc:"A · 6-8 pull-ups estrictas\nB · 12 KB swings (16-20 kg)\nC · 10 burpees",
+         moves:[{label:"Pull-up estricto",q:"strict pull up"},{label:"KB swing",q:"kettlebell swing american"},{label:"Burpee",q:"burpee"}],
          coach:"Ya hacés 5 estrictas por serie con sobra — acá vamos por 6-8. La tracción es tu arma nueva."}
       ]},
       {kind:"acc", title:"Bloque 3 · Pull-up Progression", ex:[
@@ -231,6 +242,7 @@ const PROGRAM = [
       {kind:"met", title:"Bloque 2 · Metcon (bajo impacto lumbar)", ex:[
         {id:"m4", name:"5 rounds FOR TIME", scheme:"~16'", log:"metcon",
          desc:"800 m bici\n15 sit-ups\n12 box step-ups (2×10 kg opcional)",
+         moves:[{label:"Sit-up",q:"sit up abs exercise"},{label:"Box step-up",q:"box step up dumbbell"}],
          coach:"Metcon que NO castiga la columna el día de bisagra. Inteligente, no cómodo."}
       ]},
       {kind:"acc", title:"Bloque 3 · Prehab Isquio & Anti-rotación", ex:[
@@ -250,7 +262,8 @@ const PROGRAM = [
       ]},
       {kind:"met", title:"Bloque 2 · Metcon (full body)", ex:[
         {id:"m5", name:"21-15-9 FOR TIME", scheme:"~10'", log:"metcon",
-         desc:"Thrusters (2×15 kg)\nBurpees"}
+         desc:"Thrusters (2×15 kg)\nBurpees",
+         moves:[{label:"Thruster",q:"dumbbell thruster"},{label:"Burpee",q:"burpee"}]}
       ]},
       {kind:"acc", title:"Bloque 3 · Hipertrofia brazos/hombro", ex:[
         {id:"curl", name:"DB Curl", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
@@ -273,6 +286,7 @@ const PROGRAM = [
       {kind:"met", title:"Bloque 2 · Zona 2", ex:[
         {id:"z2", name:"Bici Zona 2", scheme:"25-30'", log:"cardio",
          desc:"Ritmo conversacional (podrías hablar). Registra km + tiempo.",
+         moves:[{label:"¿Qué es Zona 2?",q:"zone 2 cardio heart rate training"}],
          coach:"Recuperación activa REAL. Tu motor ya es bueno; esto lo mantiene sin sumar fatiga."}
       ]},
       {kind:"acc", title:"Bloque 3 · Movilidad larga (día de flexibilidad)", ex:[
@@ -285,14 +299,40 @@ const PROGRAM = [
 ];
 
 /* ============= ESTADO / STORAGE ============= */
-const LS_KEY = "fc_logs_v1";
-let logs = load();
+const LS_KEY = "fc_logs_v1";     // sesiones confirmadas
+const DKEY   = "fc_drafts_v1";   // borradores en curso (autoguardado)
+let logs   = load();
+let drafts = loadDrafts();
 let curDay = new Date().getDay(); curDay = (curDay===0?6:curDay); // Dom->6
 let curView = "today";
-let draft = {}; // registro en edición
+let draft = {}; // registro en edición (referencia al borrador del día actual)
 
 function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||[] }catch(e){ return [] } }
-function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(logs)); }
+function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(logs)); }catch(e){} }
+function loadDrafts(){ try{ return JSON.parse(localStorage.getItem(DKEY))||{} }catch(e){ return {} } }
+function persistDrafts(){ try{ localStorage.setItem(DKEY, JSON.stringify(drafts)); }catch(e){} }
+
+// clave de borrador = fecha + día del plan (una sesión por día calendario)
+function draftKey(){ return todayISO()+"_"+curDay; }
+// autoguardado: persiste el borrador y muestra el indicador
+function saveDraft(){ drafts[draftKey()]=draft; persistDrafts(); flashSaved(); }
+// carga el borrador del día: (1) borrador en curso, (2) sesión ya guardada hoy, (3) vacío
+function loadCurrentDraft(){
+  const k=draftKey();
+  if(drafts[k]){ draft=drafts[k]; return; }
+  const committed = logs.find(l=>l.date===todayISO() && l.dayId===curDay);
+  if(committed){
+    draft={ _feel:committed.feel||null, notes:committed.notes||"" };
+    Object.keys(committed.entries).forEach(id=>{ draft[id]=JSON.parse(JSON.stringify(committed.entries[id])); });
+  } else { draft={}; }
+  drafts[k]=draft; persistDrafts();
+}
+let _asaveT=null;
+function flashSaved(){
+  const el=document.getElementById("asave"); if(!el) return;
+  el.classList.add("show"); clearTimeout(_asaveT);
+  _asaveT=setTimeout(()=>el.classList.remove("show"),1100);
+}
 function dayById(id){ return PROGRAM.find(d=>d.id===id); }
 function allEx(){ let o={}; PROGRAM.forEach(d=>d.blocks.forEach(b=>b.ex.forEach(e=>o[e.id]={...e,day:d.id}))); return o; }
 const EXMAP = allEx();
@@ -311,9 +351,14 @@ const DEMO_Q = {
   mob_hip:"pigeon pose hip stretch", mob_ham:"standing hamstring stretch",
   mob_tsp:"thoracic spine mobility drill", mob_sh:"shoulder dislocates band mobility"
 };
-function demoUrl(e){
-  const q = (DEMO_Q[e.id] || e.name) + " exercise form";
-  return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(q);
+function imgUrl(q){ return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(q + " exercise form"); }
+function demoUrl(e){ return imgUrl(DEMO_Q[e.id] || e.name); }
+// chips de "ver técnica" para cada movimiento de un metcon / cardio
+function movesHtml(e){
+  if(!e.moves||!e.moves.length) return "";
+  return `<div class="moves"><span class="moves-lbl">👁 Técnica:</span>${
+    e.moves.map(m=>`<a class="demo sm" href="${imgUrl(m.q)}" target="_blank" rel="noopener">${m.label}</a>`).join("")
+  }</div>`;
 }
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -331,7 +376,7 @@ function renderDays(){
     const b=document.createElement("div");
     b.className="day-btn"+(d.id===curDay?" active":"")+(doneToday(d.id)?" done":"");
     b.innerHTML=`<div class="n">DÍA ${d.id}</div><div class="f">${d.focus}</div>`;
-    b.onclick=()=>{ curDay=d.id; draft={}; renderDays(); renderSession(); window.scrollTo(0,0); };
+    b.onclick=()=>{ curDay=d.id; renderDays(); renderSession(); window.scrollTo(0,0); };
     g.appendChild(b);
   });
 }
@@ -344,8 +389,10 @@ function bestFromEntry(entry){ // max weight or max reps
 
 function renderSession(){
   const d=dayById(curDay);
+  loadCurrentDraft();
   const area=document.getElementById("sessionArea");
   let h=`
+  <div class="autosave-note small muted">💾 Tus cambios se guardan solos. <b>“Guardar sesión”</b> confirma el registro del día (lo actualiza, no lo duplica).</div>
   <div class="card warm">
     <details ${draft._warmOpen?"open":""}>
       <summary>🔥 Entrada en calor <span class="muted small">(no te la saltes — nunca en frío)</span></summary>
@@ -367,14 +414,24 @@ function renderSession(){
       ${["Fácil","Bien","Justo","Duro","Al límite"].map((t,i)=>`<button onclick="setFeel(${i+1})" data-i="${i+1}">${t}</button>`).join("")}
     </div>
     <div class="field"><label>Notas / molestias / técnica</label>
-      <textarea id="notes" rows="2" placeholder="Ej: espalda ok, pull-ups salieron sobradas...">${draft.notes||""}</textarea></div>
+      <textarea id="notes" rows="2" oninput="onNotes(this.value)" placeholder="Ej: espalda ok, pull-ups salieron sobradas...">${draft.notes||""}</textarea></div>
     <div class="coach">Anotá cualquier molestia en espalda/isquio. Ese dato vale más que el peso levantado.</div>
   </div>`;
   area.innerHTML=h;
   restoreDraft();
+  updateSaveLabel();
+}
+function onNotes(v){ draft.notes=v; saveDraft(); }
+function updateSaveLabel(){
+  const btn=document.getElementById("saveBtn"); if(!btn) return;
+  const saved = logs.some(l=>l.date===todayISO() && l.dayId===curDay);
+  btn.textContent = saved ? "Actualizar sesión ✓" : "Guardar sesión ✓";
 }
 
 function renderEx(e){
+  // valores guardados en el borrador (para prellenar y no perder nada)
+  const dv=(i,k)=>{ const s=draft[e.id]&&draft[e.id].sets&&draft[e.id].sets[i]; return (s&&s[k]!=null)?s[k]:""; };
+  const val=(k)=>{ return (draft[e.id]&&draft[e.id][k]!=null)?draft[e.id][k]:""; };
   const last = lastLogFor(e.id, todayISO());
   let lastTxt="";
   if(last){
@@ -390,24 +447,26 @@ function renderEx(e){
     for(let i=0;i<n;i++){
       if(e.log==="sets"){
         rows+=`<div class="setrow"><div class="idx">${i+1}</div>
-          <input inputmode="decimal" placeholder="kg" data-ex="${e.id}" data-i="${i}" data-k="w"><span class="u">${e.unit||"kg"}</span>
-          <input inputmode="numeric" placeholder="reps" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">reps</span></div>`;
+          <input inputmode="decimal" placeholder="kg" value="${dv(i,'w')}" data-ex="${e.id}" data-i="${i}" data-k="w"><span class="u">${e.unit||"kg"}</span>
+          <input inputmode="numeric" placeholder="reps" value="${dv(i,'r')}" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">reps</span></div>`;
       }else{
         rows+=`<div class="setrow"><div class="idx">${i+1}</div>
-          <input inputmode="numeric" placeholder="${e.unit||"reps"}" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">${e.unit||"reps"}</span></div>`;
+          <input inputmode="numeric" placeholder="${e.unit||"reps"}" value="${dv(i,'r')}" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">${e.unit||"reps"}</span></div>`;
       }
     }
     body=`<div class="sets">${rows}</div>`;
   } else if(e.log==="metcon"){
     body=`<div class="desc">${e.desc||""}</div>
+      ${movesHtml(e)}
       <div class="field"><label>Resultado (tiempo mm:ss o rondas+reps)</label>
-        <input data-ex="${e.id}" data-k="result" placeholder="Ej: 13:45  ·  8 rondas + 5"></div>
+        <input data-ex="${e.id}" data-k="result" value="${val('result')}" placeholder="Ej: 13:45  ·  8 rondas + 5"></div>
       <div class="field"><label>RPE del metcon</label>
         <div class="rpe" data-rpe="${e.id}">${[6,7,8,9,10].map(v=>`<button onclick="setRpe('${e.id}',${v})" data-v="${v}">${v}</button>`).join("")}</div></div>`;
   } else if(e.log==="cardio"){
     body=`<div class="desc">${e.desc||""}</div>
-      <div class="two field"><div><label>Km</label><input inputmode="decimal" data-ex="${e.id}" data-k="km" placeholder="km"></div>
-      <div><label>Tiempo</label><input data-ex="${e.id}" data-k="time" placeholder="mm:ss"></div></div>`;
+      ${movesHtml(e)}
+      <div class="two field"><div><label>Km</label><input inputmode="decimal" data-ex="${e.id}" data-k="km" value="${val('km')}" placeholder="km"></div>
+      <div><label>Tiempo</label><input data-ex="${e.id}" data-k="time" value="${val('time')}" placeholder="mm:ss"></div></div>`;
   } else if(e.log==="check"){
     const checked = draft[e.id]&&draft[e.id].done ? "checked":"";
     body=`<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer">
@@ -425,8 +484,8 @@ function renderEx(e){
 }
 
 /* ============= CAPTURA DE INPUTS ============= */
-document.addEventListener("input",e=>{
-  const t=e.target; const ex=t.dataset.ex; if(!ex) return;
+function onFieldChange(t){
+  const ex=t.dataset.ex; if(!ex) return;
   draft[ex]=draft[ex]||{};
   if(t.dataset.k==="w"||t.dataset.k==="r"){
     draft[ex].sets=draft[ex].sets||[];
@@ -437,14 +496,18 @@ document.addEventListener("input",e=>{
   } else {
     draft[ex][t.dataset.k]=t.value;
   }
-});
-function setRpe(ex,v){ draft[ex]=draft[ex]||{}; draft[ex].rpe=v;
+  saveDraft();
+}
+document.addEventListener("input",e=>{ if(e.target.dataset.ex) onFieldChange(e.target); });
+document.addEventListener("change",e=>{ if(e.target.dataset.k==="done") onFieldChange(e.target); });
+function setRpe(ex,v){ draft[ex]=draft[ex]||{}; draft[ex].rpe=v; saveDraft();
   document.querySelectorAll(`[data-rpe="${ex}"] button`).forEach(b=>b.classList.toggle("on",+b.dataset.v===v)); }
-function setFeel(v){ draft._feel=v;
+function setFeel(v){ draft._feel=v; saveDraft();
   document.querySelectorAll("#feel button").forEach(b=>b.classList.toggle("on",+b.dataset.i===v)); }
-function restoreDraft(){
-  if(draft._feel) setFeel(draft._feel);
-  Object.keys(draft).forEach(ex=>{ if(draft[ex]&&draft[ex].rpe) setRpe(ex,draft[ex].rpe); });
+function restoreDraft(){ // solo pinta estado visual, sin persistir
+  if(draft._feel) document.querySelectorAll("#feel button").forEach(b=>b.classList.toggle("on",+b.dataset.i===draft._feel));
+  Object.keys(draft).forEach(ex=>{ if(draft[ex]&&draft[ex].rpe)
+    document.querySelectorAll(`[data-rpe="${ex}"] button`).forEach(b=>b.classList.toggle("on",+b.dataset.v===draft[ex].rpe)); });
 }
 
 /* ============= GUARDAR ============= */
@@ -465,9 +528,14 @@ function saveSession(){
     }
   }));
   if(Object.keys(entries).length===0){ toast("Registrá al menos un ejercicio",true); return; }
-  logs.push({ id:Date.now(), date:todayISO(), dayId:curDay, dayName:d.name, entries, notes, feel:draft._feel||null });
-  persist(); draft={}; toast("Sesión guardada 💪");
-  renderDays(); renderSession(); updateStreak();
+  const idx = logs.findIndex(l=>l.date===todayISO() && l.dayId===curDay);
+  const entriesClone = JSON.parse(JSON.stringify(entries)); // desacoplar del borrador vivo
+  const rec = { date:todayISO(), dayId:curDay, dayName:d.name, entries:entriesClone, notes, feel:draft._feel||null };
+  if(idx>=0){ rec.id=logs[idx].id; logs[idx]=rec; toast("Sesión actualizada ✓"); }
+  else { rec.id=Date.now(); logs.push(rec); toast("Sesión guardada 💪"); }
+  persist();
+  // NO borramos el borrador ni los inputs: seguís viendo lo cargado y podés seguir sumando
+  renderDays(); updateStreak(); updateSaveLabel();
 }
 
 /* ============= PROGRESO ============= */
@@ -549,7 +617,15 @@ function renderHist(){
   });
   h+=`</div>`; v.innerHTML=h;
 }
-function delLog(id){ if(!confirm("¿Eliminar esta sesión?"))return; logs=logs.filter(l=>l.id!==id); persist(); renderHist(); renderDays(); toast("Eliminada"); }
+function delLog(id){
+  if(!confirm("¿Eliminar esta sesión?"))return;
+  const l=logs.find(x=>x.id===id);
+  logs=logs.filter(x=>x.id!==id);
+  if(l){ const k=l.date+"_"+l.dayId; if(drafts[k]){ delete drafts[k]; persistDrafts(); } if(k===draftKey()) draft={}; }
+  persist(); renderHist(); renderDays();
+  if(curView==="today") renderSession();
+  toast("Eliminada");
+}
 
 /* ============= AJUSTES ============= */
 function renderSet(){
@@ -576,10 +652,10 @@ function exportData(){
 }
 function importData(ev){
   const f=ev.target.files[0]; if(!f)return; const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(Array.isArray(d)){ logs=d; persist(); toast("Importado ✓"); renderAll(); } else toast("Archivo inválido",true);}catch(e){toast("Error al leer",true);} };
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(Array.isArray(d)){ logs=d; persist(); drafts={}; persistDrafts(); draft={}; toast("Importado ✓"); renderAll(); } else toast("Archivo inválido",true);}catch(e){toast("Error al leer",true);} };
   r.readAsText(f);
 }
-function wipe(){ if(!confirm("¿Borrar TODO? No se puede deshacer."))return; logs=[]; persist(); renderAll(); toast("Datos borrados"); }
+function wipe(){ if(!confirm("¿Borrar TODO? No se puede deshacer."))return; logs=[]; persist(); drafts={}; persistDrafts(); draft={}; renderAll(); toast("Datos borrados"); }
 
 /* ============= NAV / UTIL ============= */
 function tab(v){
@@ -606,6 +682,9 @@ function updateStreak(){
 function renderAll(){ renderDays(); renderSession(); updateStreak(); if(curView==="prog")renderProg(); if(curView==="hist")renderHist(); if(curView==="set")renderSet(); }
 
 /* ============= INIT ============= */
+// purgar borradores de días anteriores (ya confirmados o abandonados)
+Object.keys(drafts).forEach(k=>{ if(!k.startsWith(todayISO()+"_")) delete drafts[k]; });
+persistDrafts();
 renderDays(); renderSession(); updateStreak();
 </script>
 </body>
