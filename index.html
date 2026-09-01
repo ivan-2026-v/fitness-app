@@ -49,6 +49,10 @@
   .ex .scheme{font-size:12px; color:var(--accent2); font-weight:600;}
   .ex .hint{font-size:12px; color:var(--muted); margin-top:3px;}
   .ex .last{font-size:12px; color:var(--yellow); margin-top:4px;}
+  a.demo{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--accent2);
+    text-decoration:none; background:rgba(60,166,255,.12); border:1px solid rgba(60,166,255,.3);
+    padding:5px 10px; border-radius:20px; margin-top:7px; font-weight:600;}
+  a.demo:active{opacity:.6;}
 
   .sets{margin-top:10px; display:flex; flex-direction:column; gap:7px;}
   .setrow{display:flex; align-items:center; gap:8px;}
@@ -293,6 +297,25 @@ function dayById(id){ return PROGRAM.find(d=>d.id===id); }
 function allEx(){ let o={}; PROGRAM.forEach(d=>d.blocks.forEach(b=>b.ex.forEach(e=>o[e.id]={...e,day:d.id}))); return o; }
 const EXMAP = allEx();
 
+/* Búsquedas de técnica (fotos) por ejercicio */
+const DEMO_Q = {
+  back_squat:"barbell back squat", deadbug:"dead bug core exercise", plank:"plank exercise hold",
+  mob1:"couch stretch hip flexor", bench:"barbell bench press", dips:"assisted triceps dips",
+  facepull:"face pull cable exercise", extrot:"band shoulder external rotation",
+  strict_press:"barbell strict overhead press", bb_row:"barbell bent over row",
+  pullup_work:"strict pull up", deadhang:"dead hang bar", scap:"scapular pull ups",
+  rdl:"romanian deadlift barbell", nordic:"nordic hamstring curl", hipthrust:"barbell hip thrust",
+  pallof:"pallof press band", front_squat:"barbell front squat", curl:"dumbbell biceps curl",
+  tri:"triceps extension dumbbell", lateral:"dumbbell lateral raise", legpress:"leg press machine",
+  latpull:"lat pulldown machine", chestpress:"chest press machine", legcurl:"leg curl machine",
+  mob_hip:"pigeon pose hip stretch", mob_ham:"standing hamstring stretch",
+  mob_tsp:"thoracic spine mobility drill", mob_sh:"shoulder dislocates band mobility"
+};
+function demoUrl(e){
+  const q = (DEMO_Q[e.id] || e.name) + " exercise form";
+  return "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(q);
+}
+
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function lastLogFor(exId, beforeDate){
   const rel = logs.filter(l=>l.entries[exId] && (!beforeDate || l.date<beforeDate))
@@ -394,6 +417,7 @@ function renderEx(e){
     <div style="display:flex;justify-content:space-between;align-items:baseline">
       <span class="name">${e.name}</span><span class="scheme">${e.scheme||""}</span></div>
     ${e.hint?`<div class="hint">${e.hint}</div>`:""}
+    ${(e.log==="sets"||e.log==="reps"||e.log==="check")?`<div><a class="demo" href="${demoUrl(e)}" target="_blank" rel="noopener">👁 Ver técnica (fotos)</a></div>`:""}
     ${lastTxt?`<div class="last">↳ ${lastTxt}</div>`:""}
     ${body}
     ${e.coach?`<div class="coach">${e.coach}</div>`:""}
