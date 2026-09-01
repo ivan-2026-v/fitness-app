@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Backups exportados de la app (datos personales)
+coach-ivan-*.json
+
+# Editores
+.vscode/
+.idea/

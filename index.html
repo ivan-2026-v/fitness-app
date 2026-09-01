@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1115">
+<title>Coach · Ivan</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1e222b; --line:#2a2f3a;
+    --txt:#e8ebf0; --muted:#8b93a3; --accent:#ff5a3c; --accent2:#3ca6ff;
+    --green:#39d98a; --yellow:#ffcb45; --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--txt); padding-bottom:78px; line-height:1.4;}
+  h1,h2,h3{margin:0;}
+  .wrap{max-width:640px; margin:0 auto; padding:14px;}
+  header.top{position:sticky; top:0; z-index:20; background:rgba(15,17,21,.92);
+    backdrop-filter:blur(10px); border-bottom:1px solid var(--line); padding:12px 14px;}
+  header.top .row{display:flex; align-items:center; justify-content:space-between; max-width:640px; margin:0 auto;}
+  header.top h1{font-size:18px; letter-spacing:.3px;}
+  header.top .sub{font-size:12px; color:var(--muted); margin-top:2px;}
+  .badge{font-size:11px; background:var(--card2); color:var(--muted); padding:4px 9px; border-radius:20px; border:1px solid var(--line);}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:12px;}
+  .card h2{font-size:15px; margin-bottom:2px;}
+  .muted{color:var(--muted);} .small{font-size:12px;} .tiny{font-size:11px;}
+  .pill{display:inline-block; font-size:11px; padding:3px 9px; border-radius:20px; margin:2px 4px 2px 0;}
+  .pill.str{background:rgba(255,90,60,.15); color:#ff8a72;}
+  .pill.met{background:rgba(60,166,255,.15); color:#7cc4ff;}
+  .pill.acc{background:rgba(57,217,138,.15); color:#6ee7ad;}
+
+  /* Day selector */
+  .days{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;}
+  .day-btn{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center; cursor:pointer; transition:.15s;}
+  .day-btn.active{border-color:var(--accent); background:var(--card2);}
+  .day-btn .n{font-size:11px; color:var(--muted);}
+  .day-btn .f{font-size:13px; font-weight:600; margin-top:3px;}
+  .day-btn.done::after{content:"✓"; color:var(--green); font-size:12px; display:block; margin-top:3px;}
+
+  .block-title{display:flex; align-items:center; gap:8px; margin:18px 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted);}
+  .block-title .bar{height:14px; width:4px; border-radius:2px;}
+  .bar.b1{background:var(--accent);} .bar.b2{background:var(--accent2);} .bar.b3{background:var(--green);}
+
+  .ex{border-top:1px solid var(--line); padding-top:12px; margin-top:12px;}
+  .ex:first-child{border-top:none; padding-top:0; margin-top:0;}
+  .ex .name{font-weight:600; font-size:15px;}
+  .ex .scheme{font-size:12px; color:var(--accent2); font-weight:600;}
+  .ex .hint{font-size:12px; color:var(--muted); margin-top:3px;}
+  .ex .last{font-size:12px; color:var(--yellow); margin-top:4px;}
+
+  .sets{margin-top:10px; display:flex; flex-direction:column; gap:7px;}
+  .setrow{display:flex; align-items:center; gap:8px;}
+  .setrow .idx{width:22px; height:22px; border-radius:50%; background:var(--card2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--muted); flex:0 0 auto;}
+  input,select,textarea{font-family:inherit; background:var(--card2); border:1px solid var(--line); color:var(--txt);
+    border-radius:10px; padding:10px; font-size:15px; width:100%;}
+  input:focus,textarea:focus,select:focus{outline:none; border-color:var(--accent2);}
+  .setrow input{text-align:center;} .setrow .u{font-size:12px; color:var(--muted); flex:0 0 auto;}
+  .field{margin-top:8px;} .field label{font-size:12px; color:var(--muted); display:block; margin-bottom:4px;}
+  .two{display:flex; gap:8px;} .two>div{flex:1;}
+
+  .desc{background:var(--card2); border-radius:12px; padding:12px; font-size:14px; white-space:pre-line; border:1px solid var(--line);}
+  .rpe{display:flex; gap:6px; margin-top:8px;}
+  .rpe button{flex:1; padding:9px 0; border-radius:10px; border:1px solid var(--line); background:var(--card2); color:var(--muted); font-size:13px; cursor:pointer;}
+  .rpe button.on{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  .save-bar{position:fixed; bottom:64px; left:0; right:0; padding:10px 14px; z-index:15;
+    display:flex; justify-content:center; pointer-events:none;}
+  .save-bar button{pointer-events:auto; background:var(--accent); color:#fff; border:none; padding:14px 26px;
+    border-radius:30px; font-size:15px; font-weight:700; box-shadow:0 6px 20px rgba(255,90,60,.35); cursor:pointer; max-width:640px; width:100%;}
+
+  nav.tabs{position:fixed; bottom:0; left:0; right:0; background:rgba(15,17,21,.95); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); display:flex; z-index:30;}
+  nav.tabs button{flex:1; background:none; border:none; color:var(--muted); padding:9px 0 12px; font-size:11px; cursor:pointer;}
+  nav.tabs button .ic{font-size:19px; display:block; margin-bottom:2px;}
+  nav.tabs button.on{color:var(--accent);}
+
+  .warm{background:linear-gradient(135deg,rgba(255,90,60,.12),rgba(60,166,255,.08)); border:1px solid var(--line);}
+  details summary{cursor:pointer; font-weight:600; font-size:14px; list-style:none;}
+  details summary::-webkit-details-marker{display:none;}
+  details summary::after{content:" ▾"; color:var(--muted);}
+  details[open] summary::after{content:" ▴";}
+
+  .prog-item{display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-top:1px solid var(--line);}
+  .prog-item:first-child{border-top:none;}
+  .prog-item .v{font-weight:700; font-size:16px;}
+  .prog-item .v .u{font-size:11px; color:var(--muted); font-weight:400;}
+  .delta{font-size:12px; margin-left:6px;}
+  .delta.up{color:var(--green);} .delta.down{color:var(--accent);}
+  canvas{width:100%; height:120px; display:block; margin-top:8px;}
+  .hist-row{border-top:1px solid var(--line); padding:11px 0;}
+  .hist-row:first-child{border-top:none;}
+  .hist-row .d{font-weight:600; font-size:14px;}
+  .btn2{background:var(--card2); border:1px solid var(--line); color:var(--txt); border-radius:10px; padding:11px; width:100%; font-size:14px; cursor:pointer; margin-top:8px;}
+  .btn2.danger{color:#ff8a72; border-color:rgba(255,90,60,.4);}
+  .empty{text-align:center; color:var(--muted); padding:40px 20px; font-size:14px;}
+  .coach{font-size:12px; color:var(--muted); font-style:italic; margin-top:6px; border-left:2px solid var(--accent); padding-left:8px;}
+  .hide{display:none;}
+  .toast{position:fixed; bottom:130px; left:50%; transform:translateX(-50%); background:var(--green); color:#04120a;
+    padding:11px 20px; border-radius:30px; font-weight:700; font-size:14px; z-index:50; opacity:0; transition:.25s; pointer-events:none;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="row">
+    <div>
+      <h1>💪 Coach · Ivan</h1>
+      <div class="sub" id="topSub">Fuerza y masa magra · 6 días</div>
+    </div>
+    <div class="badge" id="streakBadge">🔥 0</div>
+  </div>
+</header>
+
+<!-- ================= HOY ================= -->
+<div class="wrap" id="view-today">
+  <div class="days" id="dayGrid"></div>
+  <div id="sessionArea"></div>
+</div>
+
+<!-- ================= PROGRESO ================= -->
+<div class="wrap hide" id="view-prog"></div>
+
+<!-- ================= HISTORIAL ================= -->
+<div class="wrap hide" id="view-hist"></div>
+
+<!-- ================= AJUSTES ================= -->
+<div class="wrap hide" id="view-set"></div>
+
+<div class="save-bar hide" id="saveBar"><button onclick="saveSession()">Guardar sesión ✓</button></div>
+<div class="toast" id="toast"></div>
+
+<nav class="tabs">
+  <button class="on" data-v="today" onclick="tab('today')"><span class="ic">🏋️</span>Hoy</button>
+  <button data-v="prog" onclick="tab('prog')"><span class="ic">📈</span>Progreso</button>
+  <button data-v="hist" onclick="tab('hist')"><span class="ic">📖</span>Historial</button>
+  <button data-v="set" onclick="tab('set')"><span class="ic">⚙️</span>Ajustes</button>
+</nav>
+
+<script>
+/* ============================================================
+   PROGRAMA — 6 días. Cada día: warmup + 3 bloques.
+   Tipos de log:
+     'sets'   -> filas peso×reps  (fuerza / accesorio con carga)
+     'reps'   -> filas reps (o seg) sin peso (pull-ups, holds)
+     'metcon' -> resultado (tiempo/rondas) + RPE
+     'cardio' -> km + tiempo
+     'check'  -> checklist de movilidad
+   Los ejercicios con track:true alimentan la pantalla de Progreso.
+============================================================ */
+const PROGRAM = [
+  { id:1, focus:"Sentadilla", name:"Lower · Squat",
+    warm:"3' bici suave · 10 leg swings/lado · 10 círculos de cadera · 10 air squats · 5 good-morning con barra vacía · 2-3 series de aproximación al peso de trabajo.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Fuerza", ex:[
+        {id:"back_squat", name:"Back Squat", scheme:"5×5", sets:5, log:"sets", track:true, unit:"kg",
+         hint:"RPE 7-8. Cadera POR DEBAJO de la rodilla. Arranca ~50 kg y construí limpio.",
+         coach:"Bajamos desde tus 65 kg de antes para reconstruir profundidad y control. El número vuelve solo."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Metcon", ex:[
+        {id:"m1", name:"4 rounds FOR TIME", scheme:"~14'", log:"metcon",
+         desc:"500 m bici\n12 goblet squats (24 kg)\n16 walking lunges (2×10 kg)",
+         coach:"Sin carga en columna: piernas + motor. La bici está lejos de la barra, no pasa nada."}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Core & Movilidad", ex:[
+        {id:"deadbug", name:"Dead bug", scheme:"3×10/lado", sets:3, log:"reps", unit:"reps"},
+        {id:"plank", name:"Plancha", scheme:"3× máx", sets:3, log:"reps", unit:"seg", track:true},
+        {id:"mob1", name:"Couch stretch + 90/90 cadera", scheme:"45s/lado", log:"check"}
+      ]}
+    ]},
+
+  { id:2, focus:"Empuje", name:"Upper · Push",
+    warm:"3' bici · 15 band pull-aparts · 10 dislocates de hombro · 10 push-ups · aproximación al banco.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Fuerza", ex:[
+        {id:"bench", name:"Bench Press", scheme:"5×5", sets:5, log:"sets", track:true, unit:"kg",
+         hint:"RPE 7-8. Arranca ~55 kg. Escápulas retraídas, pies firmes.",
+         coach:"Tu última serie previa fue 70 kg; en 5×5 limpio la base está en 55-60. Progresá +2.5 kg."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Metcon", ex:[
+        {id:"m2", name:"21-15-9 FOR TIME", scheme:"~12'", log:"metcon",
+         desc:"Push-ups\nDB push press (2×15 kg)\n+ 200 m carrera o bici entre rounds"}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Tríceps & Prehab hombro", ex:[
+        {id:"dips", name:"Dips asistidos / Tríceps extensión", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
+        {id:"facepull", name:"Face pulls", scheme:"3×15", sets:3, log:"sets", unit:"kg"},
+        {id:"extrot", name:"Rotación externa con banda", scheme:"3×12/lado", log:"check",
+         coach:"Prehab de hombro: barato ahora, carísimo saltárselo."}
+      ]}
+    ]},
+
+  { id:3, focus:"Tracción", name:"Pull + Press vertical",
+    warm:"3' bici · 15 band pull-aparts · 2×5 scapular pulls colgado · aproximación a press estricto con barra vacía.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Fuerza (superset)", ex:[
+        {id:"strict_press", name:"Strict Press", scheme:"5×5", sets:5, log:"sets", track:true, unit:"kg",
+         hint:"Arranca ~30 kg. Glúteos y core firmes, sin arquear la espalda.",
+         coach:"En EMOM llegaste a 40 kg — en 5×5 estricto arrancá en 30 y subí prolijo."},
+        {id:"bb_row", name:"Barbell Row", scheme:"5×8", sets:5, log:"sets", track:true, unit:"kg",
+         hint:"Arranca ~40 kg. Torso estable, tirá al ombligo."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Metcon (gimnásticos)", ex:[
+        {id:"m3", name:"EMOM 18 (rotar A/B/C)", scheme:"18'", log:"metcon",
+         desc:"A · 6-8 pull-ups estrictas\nB · 12 KB swings (16-20 kg)\nC · 10 burpees",
+         coach:"Ya hacés 5 estrictas por serie con sobra — acá vamos por 6-8. La tracción es tu arma nueva."}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Pull-up Progression", ex:[
+        {id:"pullup_work", name:"Pull-ups estrictas (o con lastre)", scheme:"5×5-8", sets:5, log:"reps", track:true, unit:"reps",
+         hint:"Registra reps por serie. Cuando hagas 8+ limpias → agregá lastre (mochila/disco 5 kg).",
+         coach:"Récord actual: 50 estrictas en la sesión (10×5). Próximo objetivo: 8 seguidas → luego con lastre → chest-to-bar."},
+        {id:"deadhang", name:"Dead hang", scheme:"3× máx", sets:3, log:"reps", unit:"seg", track:true},
+        {id:"scap", name:"Scapular pulls", scheme:"3×8", log:"check"}
+      ]}
+    ]},
+
+  { id:4, focus:"Bisagra", name:"Hinge (con cuidado)",
+    warm:"3' bici · drill de bisagra con barra vacía · 15 glute bridge · 10 bird-dog/lado · aproximación MUY progresiva.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Fuerza", ex:[
+        {id:"rdl", name:"Romanian Deadlift (RDL)", scheme:"4×6", sets:4, log:"sets", track:true, unit:"kg",
+         hint:"Arranca ~40 kg. RPE 7 TOPE. Espalda neutra, cadera atrás. La técnica manda sobre el número.",
+         coach:"Por tu isquio y espalda baja: construimos la bisagra con paciencia. Progresás a peso muerto convencional cuando la espalda esté sólida varias semanas. Si avisa → parás."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Metcon (bajo impacto lumbar)", ex:[
+        {id:"m4", name:"5 rounds FOR TIME", scheme:"~16'", log:"metcon",
+         desc:"800 m bici\n15 sit-ups\n12 box step-ups (2×10 kg opcional)",
+         coach:"Metcon que NO castiga la columna el día de bisagra. Inteligente, no cómodo."}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Prehab Isquio & Anti-rotación", ex:[
+        {id:"nordic", name:"Nordic curl asistido (o slider curl)", scheme:"4×5", sets:4, log:"reps", track:true, unit:"reps",
+         coach:"Blindaje directo del tejido que se lesionó. Excéntrico lento y controlado."},
+        {id:"hipthrust", name:"Hip thrust", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
+        {id:"pallof", name:"Pallof press", scheme:"3×10/lado", log:"check"}
+      ]}
+    ]},
+
+  { id:5, focus:"Full body", name:"Potencia + Hipertrofia",
+    warm:"3' bici · movilidad general · movilidad de front rack (muñeca/tríceps) · aproximación a front squat.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Fuerza", ex:[
+        {id:"front_squat", name:"Front Squat", scheme:"4×6", sets:4, log:"sets", track:true, unit:"kg",
+         hint:"Arranca ~40 kg. Codos altos, torso vertical. RPE 7-8."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Metcon (full body)", ex:[
+        {id:"m5", name:"21-15-9 FOR TIME", scheme:"~10'", log:"metcon",
+         desc:"Thrusters (2×15 kg)\nBurpees"}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Hipertrofia brazos/hombro", ex:[
+        {id:"curl", name:"DB Curl", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
+        {id:"tri", name:"Tríceps extensión", scheme:"3×12", sets:3, log:"sets", unit:"kg"},
+        {id:"lateral", name:"Elevaciones laterales", scheme:"3×15", sets:3, log:"sets", unit:"kg",
+         coach:"Masa magra = trabajo directo con volumen. Controlá el excéntrico."}
+      ]}
+    ]},
+
+  { id:6, focus:"Zona 2", name:"Cardio + Movilidad",
+    warm:"3' bici incremental · movilidad suave de cuerpo completo.",
+    blocks:[
+      {kind:"str", title:"Bloque 1 · Accesorio en máquinas (seguro)", ex:[
+        {id:"legpress", name:"Leg press", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
+        {id:"latpull", name:"Lat pulldown", scheme:"3×12", sets:3, log:"sets", track:true, unit:"kg"},
+        {id:"chestpress", name:"Chest press máquina", scheme:"3×12", sets:3, log:"sets", unit:"kg"},
+        {id:"legcurl", name:"Leg curl", scheme:"3×12", sets:3, log:"sets", unit:"kg",
+         coach:"Bombeo articulación-amigable. Sumás masa sin castigar el sistema nervioso."}
+      ]},
+      {kind:"met", title:"Bloque 2 · Zona 2", ex:[
+        {id:"z2", name:"Bici Zona 2", scheme:"25-30'", log:"cardio",
+         desc:"Ritmo conversacional (podrías hablar). Registra km + tiempo.",
+         coach:"Recuperación activa REAL. Tu motor ya es bueno; esto lo mantiene sin sumar fatiga."}
+      ]},
+      {kind:"acc", title:"Bloque 3 · Movilidad larga (día de flexibilidad)", ex:[
+        {id:"mob_hip", name:"Cadera: pigeon + couch", scheme:"2'/lado", log:"check"},
+        {id:"mob_ham", name:"Isquios: estiramiento activo", scheme:"90s/lado", log:"check"},
+        {id:"mob_tsp", name:"Torácica: opener + foam roll", scheme:"2'", log:"check"},
+        {id:"mob_sh", name:"Hombros: dislocates + doorway", scheme:"90s", log:"check"}
+      ]}
+    ]},
+];
+
+/* ============= ESTADO / STORAGE ============= */
+const LS_KEY = "fc_logs_v1";
+let logs = load();
+let curDay = new Date().getDay(); curDay = (curDay===0?6:curDay); // Dom->6
+let curView = "today";
+let draft = {}; // registro en edición
+
+function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||[] }catch(e){ return [] } }
+function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(logs)); }
+function dayById(id){ return PROGRAM.find(d=>d.id===id); }
+function allEx(){ let o={}; PROGRAM.forEach(d=>d.blocks.forEach(b=>b.ex.forEach(e=>o[e.id]={...e,day:d.id}))); return o; }
+const EXMAP = allEx();
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function lastLogFor(exId, beforeDate){
+  const rel = logs.filter(l=>l.entries[exId] && (!beforeDate || l.date<beforeDate))
+                  .sort((a,b)=>b.date.localeCompare(a.date));
+  return rel[0];
+}
+function doneToday(dayId){ return logs.some(l=>l.date===todayISO() && l.dayId===dayId); }
+
+/* ============= RENDER: HOY ============= */
+function renderDays(){
+  const g = document.getElementById("dayGrid"); g.innerHTML="";
+  PROGRAM.forEach(d=>{
+    const b=document.createElement("div");
+    b.className="day-btn"+(d.id===curDay?" active":"")+(doneToday(d.id)?" done":"");
+    b.innerHTML=`<div class="n">DÍA ${d.id}</div><div class="f">${d.focus}</div>`;
+    b.onclick=()=>{ curDay=d.id; draft={}; renderDays(); renderSession(); window.scrollTo(0,0); };
+    g.appendChild(b);
+  });
+}
+
+function bestFromEntry(entry){ // max weight or max reps
+  if(!entry||!entry.sets) return null;
+  const ws=entry.sets.map(s=>+s.w||0), rs=entry.sets.map(s=>+s.r||0);
+  return {w:Math.max(...ws), r:Math.max(...rs)};
+}
+
+function renderSession(){
+  const d=dayById(curDay);
+  const area=document.getElementById("sessionArea");
+  let h=`
+  <div class="card warm">
+    <details ${draft._warmOpen?"open":""}>
+      <summary>🔥 Entrada en calor <span class="muted small">(no te la saltes — nunca en frío)</span></summary>
+      <p class="small" style="margin:10px 0 0">${d.warm}</p>
+    </details>
+  </div>`;
+
+  d.blocks.forEach(bl=>{
+    const barCls = bl.kind==="str"?"b1":bl.kind==="met"?"b2":"b3";
+    h+=`<div class="block-title"><span class="bar ${barCls}"></span>${bl.title}</div><div class="card">`;
+    bl.ex.forEach(e=>{ h+=renderEx(e); });
+    h+=`</div>`;
+  });
+
+  // sensación general
+  h+=`<div class="card">
+    <h2>🧠 ¿Cómo te sentiste?</h2>
+    <div class="rpe" id="feel">
+      ${["Fácil","Bien","Justo","Duro","Al límite"].map((t,i)=>`<button onclick="setFeel(${i+1})" data-i="${i+1}">${t}</button>`).join("")}
+    </div>
+    <div class="field"><label>Notas / molestias / técnica</label>
+      <textarea id="notes" rows="2" placeholder="Ej: espalda ok, pull-ups salieron sobradas...">${draft.notes||""}</textarea></div>
+    <div class="coach">Anotá cualquier molestia en espalda/isquio. Ese dato vale más que el peso levantado.</div>
+  </div>`;
+  area.innerHTML=h;
+  restoreDraft();
+}
+
+function renderEx(e){
+  const last = lastLogFor(e.id, todayISO());
+  let lastTxt="";
+  if(last){
+    const b=bestFromEntry(last.entries[e.id]);
+    if(e.log==="sets" && b) lastTxt=`Última vez: <b>${b.w}${e.unit||"kg"} × ${b.r}</b> · ${last.date}`;
+    else if(e.log==="reps" && b) lastTxt=`Última vez: <b>${b.r} ${e.unit||"reps"}</b> · ${last.date}`;
+    else if(e.log==="metcon" && last.entries[e.id].result) lastTxt=`Última vez: <b>${last.entries[e.id].result}</b> · ${last.date}`;
+    else if(e.log==="cardio" && last.entries[e.id].km) lastTxt=`Última vez: <b>${last.entries[e.id].km} km / ${last.entries[e.id].time||"?"}</b> · ${last.date}`;
+  }
+  let body="";
+  if(e.log==="sets"||e.log==="reps"){
+    const n=e.sets||3; let rows="";
+    for(let i=0;i<n;i++){
+      if(e.log==="sets"){
+        rows+=`<div class="setrow"><div class="idx">${i+1}</div>
+          <input inputmode="decimal" placeholder="kg" data-ex="${e.id}" data-i="${i}" data-k="w"><span class="u">${e.unit||"kg"}</span>
+          <input inputmode="numeric" placeholder="reps" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">reps</span></div>`;
+      }else{
+        rows+=`<div class="setrow"><div class="idx">${i+1}</div>
+          <input inputmode="numeric" placeholder="${e.unit||"reps"}" data-ex="${e.id}" data-i="${i}" data-k="r"><span class="u">${e.unit||"reps"}</span></div>`;
+      }
+    }
+    body=`<div class="sets">${rows}</div>`;
+  } else if(e.log==="metcon"){
+    body=`<div class="desc">${e.desc||""}</div>
+      <div class="field"><label>Resultado (tiempo mm:ss o rondas+reps)</label>
+        <input data-ex="${e.id}" data-k="result" placeholder="Ej: 13:45  ·  8 rondas + 5"></div>
+      <div class="field"><label>RPE del metcon</label>
+        <div class="rpe" data-rpe="${e.id}">${[6,7,8,9,10].map(v=>`<button onclick="setRpe('${e.id}',${v})" data-v="${v}">${v}</button>`).join("")}</div></div>`;
+  } else if(e.log==="cardio"){
+    body=`<div class="desc">${e.desc||""}</div>
+      <div class="two field"><div><label>Km</label><input inputmode="decimal" data-ex="${e.id}" data-k="km" placeholder="km"></div>
+      <div><label>Tiempo</label><input data-ex="${e.id}" data-k="time" placeholder="mm:ss"></div></div>`;
+  } else if(e.log==="check"){
+    const checked = draft[e.id]&&draft[e.id].done ? "checked":"";
+    body=`<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer">
+      <input type="checkbox" style="width:20px;height:20px" data-ex="${e.id}" data-k="done" ${checked}> Completado</label>`;
+  }
+  return `<div class="ex">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span class="name">${e.name}</span><span class="scheme">${e.scheme||""}</span></div>
+    ${e.hint?`<div class="hint">${e.hint}</div>`:""}
+    ${lastTxt?`<div class="last">↳ ${lastTxt}</div>`:""}
+    ${body}
+    ${e.coach?`<div class="coach">${e.coach}</div>`:""}
+  </div>`;
+}
+
+/* ============= CAPTURA DE INPUTS ============= */
+document.addEventListener("input",e=>{
+  const t=e.target; const ex=t.dataset.ex; if(!ex) return;
+  draft[ex]=draft[ex]||{};
+  if(t.dataset.k==="w"||t.dataset.k==="r"){
+    draft[ex].sets=draft[ex].sets||[];
+    const i=+t.dataset.i; draft[ex].sets[i]=draft[ex].sets[i]||{};
+    draft[ex].sets[i][t.dataset.k]=t.value;
+  } else if(t.dataset.k==="done"){
+    draft[ex].done=t.checked;
+  } else {
+    draft[ex][t.dataset.k]=t.value;
+  }
+});
+function setRpe(ex,v){ draft[ex]=draft[ex]||{}; draft[ex].rpe=v;
+  document.querySelectorAll(`[data-rpe="${ex}"] button`).forEach(b=>b.classList.toggle("on",+b.dataset.v===v)); }
+function setFeel(v){ draft._feel=v;
+  document.querySelectorAll("#feel button").forEach(b=>b.classList.toggle("on",+b.dataset.i===v)); }
+function restoreDraft(){
+  if(draft._feel) setFeel(draft._feel);
+  Object.keys(draft).forEach(ex=>{ if(draft[ex]&&draft[ex].rpe) setRpe(ex,draft[ex].rpe); });
+}
+
+/* ============= GUARDAR ============= */
+function saveSession(){
+  const notes=(document.getElementById("notes")||{}).value||"";
+  const entries={};
+  const d=dayById(curDay);
+  d.blocks.forEach(bl=>bl.ex.forEach(e=>{
+    const dr=draft[e.id]; if(!dr) return;
+    if(e.log==="sets"||e.log==="reps"){
+      if(dr.sets && dr.sets.some(s=>s&&((s.w&&+s.w>0)||(s.r&&+s.r>0)))) entries[e.id]={sets:dr.sets};
+    } else if(e.log==="metcon"){
+      if(dr.result||dr.rpe) entries[e.id]={result:dr.result||"",rpe:dr.rpe||null};
+    } else if(e.log==="cardio"){
+      if(dr.km||dr.time) entries[e.id]={km:dr.km||"",time:dr.time||""};
+    } else if(e.log==="check"){
+      if(dr.done) entries[e.id]={done:true};
+    }
+  }));
+  if(Object.keys(entries).length===0){ toast("Registrá al menos un ejercicio",true); return; }
+  logs.push({ id:Date.now(), date:todayISO(), dayId:curDay, dayName:d.name, entries, notes, feel:draft._feel||null });
+  persist(); draft={}; toast("Sesión guardada 💪");
+  renderDays(); renderSession(); updateStreak();
+}
+
+/* ============= PROGRESO ============= */
+function renderProg(){
+  const v=document.getElementById("view-prog");
+  const tracked = Object.values(EXMAP).filter(e=>e.track);
+  let h=`<div class="card"><h2>📈 Tus levantamientos principales</h2>
+    <p class="small muted" style="margin-top:4px">Mejor serie por sesión. La flecha compara con la vez anterior.</p></div>`;
+
+  let any=false;
+  tracked.forEach(e=>{
+    const series = logs.filter(l=>l.entries[e.id]).sort((a,b)=>a.date.localeCompare(b.date))
+      .map(l=>{ const b=bestFromEntry(l.entries[e.id]); return {date:l.date, val: e.log==="reps"? b.r : b.w }; })
+      .filter(p=>p.val>0);
+    if(series.length===0) return; any=true;
+    const cur=series[series.length-1].val, prev=series.length>1?series[series.length-2].val:null;
+    const delta = prev!==null ? cur-prev : null;
+    const dtxt = delta===null?"" : delta>0?`<span class="delta up">▲ +${round(delta)}</span>` : delta<0?`<span class="delta down">▼ ${round(delta)}</span>`:`<span class="delta muted">=</span>`;
+    const cid="c_"+e.id;
+    h+=`<div class="card">
+      <div class="prog-item" style="border:none;padding-bottom:0">
+        <div><b>${e.name}</b><div class="tiny muted">${e.scheme} · ${series.length} sesiones</div></div>
+        <div class="v">${round(cur)}<span class="u"> ${e.unit||"kg"}</span>${dtxt}</div>
+      </div>
+      <canvas id="${cid}"></canvas>
+    </div>`;
+    setTimeout(()=>drawChart(cid, series.map(p=>p.val)),0);
+  });
+  if(!any) h+=`<div class="empty">Todavía no hay datos de fuerza.<br>Registrá tu primera sesión y volvé acá. 💪</div>`;
+
+  // PRs de metcon
+  const mets=logs.filter(l=>Object.keys(l.entries).some(k=>EXMAP[k]&&EXMAP[k].log==="metcon"));
+  if(mets.length){
+    h+=`<div class="card"><h2>🏆 Historial de metcons</h2>`;
+    mets.slice().reverse().slice(0,12).forEach(l=>{
+      Object.keys(l.entries).forEach(k=>{
+        if(EXMAP[k]&&EXMAP[k].log==="metcon"&&l.entries[k].result){
+          h+=`<div class="prog-item"><div><b>${EXMAP[k].name}</b><div class="tiny muted">${l.date} · ${EXMAP[k].scheme}${l.entries[k].rpe?` · RPE ${l.entries[k].rpe}`:""}</div></div><div class="v small">${l.entries[k].result}</div></div>`;
+        }
+      });
+    });
+    h+=`</div>`;
+  }
+  v.innerHTML=h;
+}
+function round(n){ return Math.round(n*10)/10; }
+function drawChart(id, data){
+  const c=document.getElementById(id); if(!c) return;
+  const dpr=window.devicePixelRatio||1; const W=c.clientWidth, H=120;
+  c.width=W*dpr; c.height=H*dpr; const ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
+  const pad=18, min=Math.min(...data), max=Math.max(...data), rng=(max-min)||1;
+  const x=i=> data.length<=1? W/2 : pad+i*(W-2*pad)/(data.length-1);
+  const y=val=> H-pad-(val-min)/rng*(H-2*pad);
+  // línea
+  ctx.strokeStyle="#ff5a3c"; ctx.lineWidth=2.5; ctx.beginPath();
+  data.forEach((v,i)=>{ i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)); }); ctx.stroke();
+  // relleno
+  ctx.lineTo(x(data.length-1),H-pad); ctx.lineTo(x(0),H-pad); ctx.closePath();
+  ctx.fillStyle="rgba(255,90,60,.10)"; ctx.fill();
+  // puntos
+  data.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(v),3.2,0,7); ctx.fillStyle="#ff5a3c"; ctx.fill(); });
+}
+
+/* ============= HISTORIAL ============= */
+function renderHist(){
+  const v=document.getElementById("view-hist");
+  if(!logs.length){ v.innerHTML=`<div class="empty">Sin sesiones aún.<br>Tu historial aparecerá acá.</div>`; return; }
+  const feelTxt=["","Fácil","Bien","Justo","Duro","Al límite"];
+  let h=`<div class="card"><h2>📖 Historial (${logs.length})</h2></div><div class="card">`;
+  logs.slice().reverse().forEach(l=>{
+    const nEx=Object.keys(l.entries).length;
+    h+=`<div class="hist-row">
+      <div style="display:flex;justify-content:space-between">
+        <span class="d">${l.dayName||"Sesión"}</span><span class="tiny muted">${l.date}</span></div>
+      <div class="tiny muted" style="margin-top:3px">${nEx} ejercicios${l.feel?` · sensación: ${feelTxt[l.feel]}`:""}</div>
+      ${l.notes?`<div class="small" style="margin-top:5px">📝 ${l.notes}</div>`:""}
+      <button class="btn2 danger tiny" style="padding:6px;margin-top:6px" onclick="delLog(${l.id})">Eliminar</button>
+    </div>`;
+  });
+  h+=`</div>`; v.innerHTML=h;
+}
+function delLog(id){ if(!confirm("¿Eliminar esta sesión?"))return; logs=logs.filter(l=>l.id!==id); persist(); renderHist(); renderDays(); toast("Eliminada"); }
+
+/* ============= AJUSTES ============= */
+function renderSet(){
+  const v=document.getElementById("view-set");
+  const total=logs.length;
+  v.innerHTML=`
+    <div class="card"><h2>⚙️ Ajustes y datos</h2>
+      <p class="small muted" style="margin-top:6px">Todo se guarda en este dispositivo (offline). Exportá seguido como respaldo.</p>
+      <div class="prog-item"><span>Sesiones registradas</span><b>${total}</b></div>
+      <button class="btn2" onclick="exportData()">⬇️ Exportar respaldo (JSON)</button>
+      <button class="btn2" onclick="document.getElementById('imp').click()">⬆️ Importar respaldo</button>
+      <input id="imp" type="file" accept="application/json" class="hide" onchange="importData(event)">
+      <button class="btn2 danger" onclick="wipe()">🗑️ Borrar todos los datos</button>
+    </div>
+    <div class="card"><h2>📋 El plan</h2>
+      <p class="small muted" style="margin-top:6px">Fuerza y masa magra · 6 días · Bloque 1 fuerza / Bloque 2 metcon / Bloque 3 accesorio-prehab-movilidad.</p>
+      <div class="coach">Regla de oro: técnica &gt; número, constancia &gt; picos. La espalda y el isquio mandan sobre el ego. Deload cada 4 semanas.</div>
+    </div>`;
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(logs,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="coach-ivan-"+todayISO()+".json"; a.click();
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f)return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(Array.isArray(d)){ logs=d; persist(); toast("Importado ✓"); renderAll(); } else toast("Archivo inválido",true);}catch(e){toast("Error al leer",true);} };
+  r.readAsText(f);
+}
+function wipe(){ if(!confirm("¿Borrar TODO? No se puede deshacer."))return; logs=[]; persist(); renderAll(); toast("Datos borrados"); }
+
+/* ============= NAV / UTIL ============= */
+function tab(v){
+  curView=v;
+  ["today","prog","hist","set"].forEach(x=>document.getElementById("view-"+x).classList.toggle("hide",x!==v));
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  document.getElementById("saveBar").classList.toggle("hide",v!=="today");
+  if(v==="prog")renderProg(); if(v==="hist")renderHist(); if(v==="set")renderSet();
+  window.scrollTo(0,0);
+}
+function toast(msg,bad){ const t=document.getElementById("toast"); t.textContent=msg;
+  t.style.background=bad?"#ff5a3c":"#39d98a"; t.style.color=bad?"#fff":"#04120a";
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1900); }
+function updateStreak(){
+  // días distintos con al menos una sesión, consecutivos hacia atrás desde hoy
+  const dates=[...new Set(logs.map(l=>l.date))].sort().reverse();
+  let s=0; let d=new Date();
+  for(;;){ const iso=d.toISOString().slice(0,10);
+    if(dates.includes(iso)){ s++; d.setDate(d.getDate()-1); }
+    else if(iso===todayISO()){ d.setDate(d.getDate()-1); } // hoy aún sin entrenar no rompe
+    else break; }
+  document.getElementById("streakBadge").textContent="🔥 "+s;
+}
+function renderAll(){ renderDays(); renderSession(); updateStreak(); if(curView==="prog")renderProg(); if(curView==="hist")renderHist(); if(curView==="set")renderSet(); }
+
+/* ============= INIT ============= */
+renderDays(); renderSession(); updateStreak();
+</script>
+</body>
+</html>
