@@ -57,6 +57,8 @@
   .moves{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px;}
   .moves-lbl{font-size:12px; color:var(--muted); font-weight:600; margin-right:2px;}
   .autosave-note{background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:9px 12px; margin-bottom:12px;}
+  .volbar{background:rgba(255,90,60,.10); border:1px solid rgba(255,90,60,.28); border-radius:12px; padding:10px 12px; margin-bottom:12px; font-size:14px;}
+  .volbar b{color:var(--accent); font-size:16px;}
   .asave{position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-8px); background:var(--green); color:#04120a;
     padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; z-index:40; opacity:0; transition:.2s; pointer-events:none;}
   .asave.show{opacity:1; transform:translateX(-50%) translateY(0);}
@@ -387,6 +389,19 @@ function bestFromEntry(entry){ // max weight or max reps
   const ws=entry.sets.map(s=>+s.w||0), rs=entry.sets.map(s=>+s.r||0);
   return {w:Math.max(...ws), r:Math.max(...rs)};
 }
+// Volumen / tonelaje = Σ (peso × reps) de los ejercicios con carga. Sirve para logs y borradores.
+function volumeOf(obj){
+  let v=0;
+  Object.keys(obj||{}).forEach(id=>{
+    const ex=EXMAP[id]; if(!ex||ex.log!=="sets"||!obj[id]||!obj[id].sets) return;
+    obj[id].sets.forEach(s=>{ v += (+s.w||0)*(+s.r||0); });
+  });
+  return Math.round(v);
+}
+function kg(n){ return (n||0).toLocaleString("es")+" kg"; }
+function updateVol(){
+  const el=document.getElementById("volReadout"); if(el) el.textContent=kg(volumeOf(draft));
+}
 
 function renderSession(){
   const d=dayById(curDay);
@@ -394,6 +409,7 @@ function renderSession(){
   const area=document.getElementById("sessionArea");
   let h=`
   <div class="autosave-note small muted">💾 Tus cambios se guardan solos. <b>“Guardar sesión”</b> confirma el registro del día (lo actualiza, no lo duplica). Si pasan <b>2 h sin cambios</b>, se confirma sola como sesión final.</div>
+  <div class="volbar">🏋️ Volumen de hoy: <b id="volReadout">0 kg</b> <span class="tiny muted">Σ peso × reps</span></div>
   <div class="card warm">
     <details ${draft._warmOpen?"open":""}>
       <summary>🔥 Entrada en calor <span class="muted small">(no te la saltes — nunca en frío)</span></summary>
@@ -421,6 +437,7 @@ function renderSession(){
   area.innerHTML=h;
   restoreDraft();
   updateSaveLabel();
+  updateVol();
 }
 function onNotes(v){ draft.notes=v; saveDraft(); }
 function updateSaveLabel(){
@@ -505,6 +522,7 @@ function onFieldChange(t){
     draft[ex][t.dataset.k]=t.value;
   }
   saveDraft();
+  updateVol();
 }
 document.addEventListener("input",e=>{ if(e.target.dataset.ex) onFieldChange(e.target); });
 document.addEventListener("change",e=>{ if(e.target.dataset.k==="done") onFieldChange(e.target); });
@@ -590,7 +608,27 @@ setInterval(()=>{
 function renderProg(){
   const v=document.getElementById("view-prog");
   const tracked = Object.values(EXMAP).filter(e=>e.track);
-  let h=`<div class="card"><h2>📈 Tus levantamientos principales</h2>
+
+  // ---- Volumen total (tonelaje) por sesión ----
+  const volSeries = logs.map(l=>({date:l.date, val:volumeOf(l.entries)}))
+    .filter(p=>p.val>0).sort((a,b)=>a.date.localeCompare(b.date));
+  let h="";
+  if(volSeries.length){
+    const cur=volSeries[volSeries.length-1].val, prev=volSeries.length>1?volSeries[volSeries.length-2].val:null;
+    const delta=prev!==null?cur-prev:null;
+    const dtxt = delta===null?"" : delta>0?`<span class="delta up">▲ +${kg(delta)}</span>` : delta<0?`<span class="delta down">▼ ${kg(delta)}</span>`:`<span class="delta muted">=</span>`;
+    h+=`<div class="card">
+      <div class="prog-item" style="border:none;padding-bottom:0">
+        <div><b>🏋️ Volumen por sesión</b><div class="tiny muted">Σ peso×reps · ${volSeries.length} sesiones</div></div>
+        <div class="v">${(cur||0).toLocaleString("es")}<span class="u"> kg</span>${dtxt}</div>
+      </div>
+      <canvas id="c_vol"></canvas>
+      <div class="tiny muted" style="margin-top:6px">La métrica más honesta de tu carga de trabajo. Si sube semana a semana, estás progresando.</div>
+    </div>`;
+    setTimeout(()=>drawChart("c_vol", volSeries.map(p=>p.val)),0);
+  }
+
+  h+=`<div class="card"><h2>📈 Tus levantamientos principales</h2>
     <p class="small muted" style="margin-top:4px">Mejor serie por sesión. La flecha compara con la vez anterior.</p></div>`;
 
   let any=false;
@@ -655,10 +693,11 @@ function renderHist(){
   let h=`<div class="card"><h2>📖 Historial (${logs.length})</h2></div><div class="card">`;
   logs.slice().reverse().forEach(l=>{
     const nEx=Object.keys(l.entries).length;
+    const vol=volumeOf(l.entries);
     h+=`<div class="hist-row">
       <div style="display:flex;justify-content:space-between">
-        <span class="d">${l.dayName||"Sesión"}</span><span class="tiny muted">${l.date}</span></div>
-      <div class="tiny muted" style="margin-top:3px">${nEx} ejercicios${l.feel?` · sensación: ${feelTxt[l.feel]}`:""}</div>
+        <span class="d">${l.dayName||"Sesión"}</span><span class="tiny muted">${fmtDate(l.date)}</span></div>
+      <div class="tiny muted" style="margin-top:3px">${nEx} ejercicios${vol>0?` · 🏋️ ${kg(vol)}`:""}${l.feel?` · ${feelTxt[l.feel]}`:""}</div>
       ${l.notes?`<div class="small" style="margin-top:5px">📝 ${l.notes}</div>`:""}
       <button class="btn2 danger tiny" style="padding:6px;margin-top:6px" onclick="delLog(${l.id})">Eliminar</button>
     </div>`;
