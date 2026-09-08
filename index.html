@@ -314,8 +314,8 @@ function persistDrafts(){ try{ localStorage.setItem(DKEY, JSON.stringify(drafts)
 
 // clave de borrador = fecha + día del plan (una sesión por día calendario)
 function draftKey(){ return todayISO()+"_"+curDay; }
-// autoguardado: persiste el borrador y muestra el indicador
-function saveDraft(){ drafts[draftKey()]=draft; persistDrafts(); flashSaved(); }
+// autoguardado: persiste el borrador (con timestamp del último cambio) y muestra el indicador
+function saveDraft(){ draft._ts=Date.now(); drafts[draftKey()]=draft; persistDrafts(); flashSaved(); }
 // carga el borrador del día: (1) borrador en curso, (2) sesión ya guardada hoy, (3) vacío
 function loadCurrentDraft(){
   const k=draftKey();
@@ -392,7 +392,7 @@ function renderSession(){
   loadCurrentDraft();
   const area=document.getElementById("sessionArea");
   let h=`
-  <div class="autosave-note small muted">💾 Tus cambios se guardan solos. <b>“Guardar sesión”</b> confirma el registro del día (lo actualiza, no lo duplica).</div>
+  <div class="autosave-note small muted">💾 Tus cambios se guardan solos. <b>“Guardar sesión”</b> confirma el registro del día (lo actualiza, no lo duplica). Si pasan <b>2 h sin cambios</b>, se confirma sola como sesión final.</div>
   <div class="card warm">
     <details ${draft._warmOpen?"open":""}>
       <summary>🔥 Entrada en calor <span class="muted small">(no te la saltes — nunca en frío)</span></summary>
@@ -511,32 +511,72 @@ function restoreDraft(){ // solo pinta estado visual, sin persistir
 }
 
 /* ============= GUARDAR ============= */
-function saveSession(){
-  const notes=(document.getElementById("notes")||{}).value||"";
-  const entries={};
-  const d=dayById(curDay);
+const AUTO_MS = 2*60*60*1000; // 2 horas sin cambios => cierre automático
+
+// arma las entries válidas a partir de un borrador y un día del plan
+function buildEntries(dr, dayId){
+  const d=dayById(dayId); const entries={};
   d.blocks.forEach(bl=>bl.ex.forEach(e=>{
-    const dr=draft[e.id]; if(!dr) return;
+    const x=dr[e.id]; if(!x) return;
     if(e.log==="sets"||e.log==="reps"){
-      if(dr.sets && dr.sets.some(s=>s&&((s.w&&+s.w>0)||(s.r&&+s.r>0)))) entries[e.id]={sets:dr.sets};
+      if(x.sets && x.sets.some(s=>s&&((s.w&&+s.w>0)||(s.r&&+s.r>0)))) entries[e.id]={sets:x.sets};
     } else if(e.log==="metcon"){
-      if(dr.result||dr.rpe) entries[e.id]={result:dr.result||"",rpe:dr.rpe||null};
+      if(x.result||x.rpe) entries[e.id]={result:x.result||"",rpe:x.rpe||null};
     } else if(e.log==="cardio"){
-      if(dr.km||dr.time) entries[e.id]={km:dr.km||"",time:dr.time||""};
+      if(x.km||x.time) entries[e.id]={km:x.km||"",time:x.time||""};
     } else if(e.log==="check"){
-      if(dr.done) entries[e.id]={done:true};
+      if(x.done) entries[e.id]={done:true};
     }
   }));
+  return entries;
+}
+// upsert: una sesión por (fecha, día). Devuelve true si creó una nueva.
+function upsertLog(date, dayId, entries, dr){
+  const d=dayById(dayId);
+  const idx=logs.findIndex(l=>l.date===date && l.dayId===dayId);
+  const rec={ date, dayId, dayName:d.name, entries:JSON.parse(JSON.stringify(entries)),
+              notes:dr.notes||"", feel:dr._feel||null };
+  if(idx>=0){ rec.id=logs[idx].id; logs[idx]=rec; return false; }
+  rec.id=Date.now()+Math.floor(Math.random()*1000); logs.push(rec); return true;
+}
+
+function saveSession(){
+  draft.notes=(document.getElementById("notes")||{}).value||draft.notes||"";
+  const entries=buildEntries(draft, curDay);
   if(Object.keys(entries).length===0){ toast("Registrá al menos un ejercicio",true); return; }
-  const idx = logs.findIndex(l=>l.date===todayISO() && l.dayId===curDay);
-  const entriesClone = JSON.parse(JSON.stringify(entries)); // desacoplar del borrador vivo
-  const rec = { date:todayISO(), dayId:curDay, dayName:d.name, entries:entriesClone, notes, feel:draft._feel||null };
-  if(idx>=0){ rec.id=logs[idx].id; logs[idx]=rec; toast("Sesión actualizada ✓"); }
-  else { rec.id=Date.now(); logs.push(rec); toast("Sesión guardada 💪"); }
-  persist();
+  const isNew=upsertLog(todayISO(), curDay, entries, draft);
+  draft._savedTs=draft._ts||Date.now();            // marca este estado como confirmado
+  persist(); persistDrafts();
+  toast(isNew ? "Sesión guardada 💪" : "Sesión actualizada ✓");
   // NO borramos el borrador ni los inputs: seguís viendo lo cargado y podés seguir sumando
   renderDays(); updateStreak(); updateSaveLabel();
 }
+
+// Cierra automáticamente los borradores con cambios sin confirmar y 2h+ de inactividad.
+// Devuelve true si confirmó al menos uno. Corre al abrir la app y por timer mientras está abierta.
+function autoCommitStale(){
+  const now=Date.now(); let done=false;
+  Object.keys(drafts).forEach(k=>{
+    const dr=drafts[k]; if(!dr||!dr._ts) return;
+    if(dr._savedTs===dr._ts) return;               // sin cambios pendientes
+    if(now - dr._ts < AUTO_MS) return;             // todavía no pasaron 2h
+    const [date,dayIdStr]=k.split("_"); const dayId=+dayIdStr;
+    const entries=buildEntries(dr, dayId);
+    if(Object.keys(entries).length===0){ return; } // nada real que guardar
+    upsertLog(date, dayId, entries, dr);
+    dr._savedTs=dr._ts; done=true;
+  });
+  if(done){ persist(); persistDrafts(); }
+  return done;
+}
+// timer: cada minuto revisa si toca el cierre automático (mientras la app está abierta)
+setInterval(()=>{
+  if(autoCommitStale()){
+    renderDays(); updateStreak();
+    if(curView==="today") updateSaveLabel();
+    toast("Sesión guardada automáticamente (2 h sin cambios)");
+  }
+}, 60000);
 
 /* ============= PROGRESO ============= */
 function renderProg(){
@@ -682,7 +722,9 @@ function updateStreak(){
 function renderAll(){ renderDays(); renderSession(); updateStreak(); if(curView==="prog")renderProg(); if(curView==="hist")renderHist(); if(curView==="set")renderSet(); }
 
 /* ============= INIT ============= */
-// purgar borradores de días anteriores (ya confirmados o abandonados)
+// 1) auto-cerrar borradores con cambios sin confirmar y 2h+ de inactividad (incluye días previos)
+autoCommitStale();
+// 2) purgar borradores de días anteriores (ya confirmados arriba o sin contenido)
 Object.keys(drafts).forEach(k=>{ if(!k.startsWith(todayISO()+"_")) delete drafts[k]; });
 persistDrafts();
 renderDays(); renderSession(); updateStreak();
