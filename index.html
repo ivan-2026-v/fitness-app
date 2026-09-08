@@ -362,6 +362,7 @@ function movesHtml(e){
 }
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(iso){ const p=(iso||"").split("-"); return p.length===3 ? p[2]+"/"+p[1] : iso; }
 function lastLogFor(exId, beforeDate){
   const rel = logs.filter(l=>l.entries[exId] && (!beforeDate || l.date<beforeDate))
                   .sort((a,b)=>b.date.localeCompare(a.date));
@@ -435,11 +436,18 @@ function renderEx(e){
   const last = lastLogFor(e.id, todayISO());
   let lastTxt="";
   if(last){
-    const b=bestFromEntry(last.entries[e.id]);
-    if(e.log==="sets" && b) lastTxt=`Última vez: <b>${b.w}${e.unit||"kg"} × ${b.r}</b> · ${last.date}`;
-    else if(e.log==="reps" && b) lastTxt=`Última vez: <b>${b.r} ${e.unit||"reps"}</b> · ${last.date}`;
-    else if(e.log==="metcon" && last.entries[e.id].result) lastTxt=`Última vez: <b>${last.entries[e.id].result}</b> · ${last.date}`;
-    else if(e.log==="cardio" && last.entries[e.id].km) lastTxt=`Última vez: <b>${last.entries[e.id].km} km / ${last.entries[e.id].time||"?"}</b> · ${last.date}`;
+    const ent=last.entries[e.id]; const dt=fmtDate(last.date);
+    if(e.log==="sets"){
+      const sets=(ent.sets||[]).filter(s=>s&&((s.w&&+s.w>0)||(s.r&&+s.r>0)));
+      if(sets.length) lastTxt=`Última vez (${dt}): <b>${sets.map(s=>`${s.w||"—"}×${s.r||"—"}`).join(" · ")}</b>`;
+    } else if(e.log==="reps"){
+      const sets=(ent.sets||[]).filter(s=>s&&s.r&&+s.r>0);
+      if(sets.length) lastTxt=`Última vez (${dt}): <b>${sets.map(s=>s.r).join(" · ")} ${e.unit||"reps"}</b>`;
+    } else if(e.log==="metcon" && ent.result){
+      lastTxt=`Última vez (${dt}): <b>${ent.result}</b>${ent.rpe?` · RPE ${ent.rpe}`:""}`;
+    } else if(e.log==="cardio" && ent.km){
+      lastTxt=`Última vez (${dt}): <b>${ent.km} km / ${ent.time||"?"}</b>`;
+    }
   }
   let body="";
   if(e.log==="sets"||e.log==="reps"){
