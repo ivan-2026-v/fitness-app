@@ -2,30 +2,49 @@
 
 App personal de entrenamiento + plan de fuerza y masa magra (6 días/semana).
 
+**App en vivo:** https://ivan-2026-v.github.io/fitness-app/
+
 ## Contenido
 
-- **[index.html](index.html)** — La app. Un solo archivo, funciona offline, guarda los datos en el navegador (localStorage). Registra pesos/reps, tiempos de metcon y muestra el progreso en gráficos.
+- **[index.html](index.html)** — La app. Un solo archivo, funciona offline, guarda los datos en el navegador (localStorage).
 - **[rutina.md](rutina.md)** — El plan documentado: diagnóstico, split de 6 días, reglas de progresión y pilares de seguridad.
 - **[trainings.md](trainings.md)** — Historial de entrenamientos (registro base del grupo QGDFitness).
 
+## Funciones de la app
+
+- **Registro por serie** (peso × reps) con el **detalle serie por serie de la última vez** para saber qué superar.
+- **Metcons** con resultado + RPE; **sensación y notas** por sesión.
+- **"👁 Ver técnica"**: fotos de cada ejercicio y de cada movimiento del metcon.
+- **Volumen / tonelaje** (Σ peso × reps): en vivo, en el historial y como gráfico de evolución en Progreso.
+- **Autoguardado** continuo + **una sesión por día que se sobrescribe** (no duplica) + **auto-cierre a las 2 h** sin cambios.
+- **Progreso** (evolución por ejercicio + volumen) e **Historial** (diario por fecha).
+- **Respaldo**: exportar/importar JSON desde Ajustes.
+
 ## Cómo usar la app
 
-**En la Mac:**
+**En el teléfono (recomendado):** abrí la URL de arriba y usá **Compartir → Agregar a inicio**. Queda como ícono y funciona offline.
+
+**En la Mac (local):**
 ```bash
 open index.html
 ```
 
-**En el teléfono (misma WiFi, para probar):**
+**En el teléfono por WiFi local (para probar sin hosting):**
 ```bash
 python3 -m http.server 8080
 ```
 Después abrí `http://IP-DE-LA-MAC:8080/index.html` en el celular.
 
-**En el teléfono (offline, para el gym):** abrí la app una vez (por AirDrop o desde una URL hosteada) y usá **Compartir → Agregar a inicio**. Queda como ícono y funciona sin conexión.
+## Datos y respaldo
 
-## Respaldo de datos
+Los registros viven en el navegador del dispositivo (localStorage), son privados y no se suben a ningún lado. Desde **Ajustes → Exportar respaldo** guardás un JSON; para restaurar, **Importar respaldo**.
 
-Los registros viven en el navegador del dispositivo. Desde **Ajustes → Exportar respaldo** guardás un JSON. Para restaurar, **Importar respaldo**.
+## Desarrollo
+
+Editar los archivos y publicar los cambios a la app en vivo (GitHub Pages):
+```bash
+git add -A && git commit -m "..." && git push
+```
 
 ## Estructura del plan
 

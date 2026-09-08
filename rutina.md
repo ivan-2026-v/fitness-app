@@ -75,11 +75,25 @@ La carga lumbar pesada (Squat día 1, Hinge día 4) queda **separada 3 días** p
 
 ---
 
-## 📱 La app (`index.html`)
+## 📱 La app
 
-Abrí `index.html` en el celular. Guarda todo localmente (funciona offline). Te permite:
-- Ver la sesión del día con los 3 bloques y el warm-up.
-- Registrar **peso × reps** de cada serie de fuerza (te muestra la última vez para superarla).
-- Registrar **tiempo / rondas** de los metcons y tu **RPE + sensación + notas**.
-- Ver el **progreso** de tus levantamientos principales en gráficos y tus **PRs de metcon**.
-- Exportar/importar tus datos como respaldo.
+**URL:** `https://ivan-2026-v.github.io/fitness-app/` (o `index.html` local). Funciona offline y guarda todo en el navegador del dispositivo.
+
+**Registro de la sesión (pestaña Hoy):**
+- Los 3 bloques del día + warm-up, con la carga sugerida de arranque.
+- **Peso × reps** por serie. Debajo de cada ejercicio ves el **detalle serie por serie de la última vez** (ej: `Última vez (14/09): 50×5 · 52×5 · 52×4`) para saber qué superar.
+- Metcons con **resultado (tiempo/rondas) + RPE**, y **sensación + notas** de la sesión.
+- **"👁 Ver técnica"** en cada ejercicio y en cada movimiento del metcon → abre fotos del ejercicio.
+- **🏋️ Volumen de hoy** en vivo (Σ peso × reps) que crece mientras cargás.
+
+**Guardado (a prueba de olvidos):**
+- **Autoguardado** continuo: cada cambio se persiste solo (no se pierde nada).
+- **Una sesión por día que se sobrescribe**: "Guardar sesión" actualiza el mismo registro, no duplica; los inputs no se borran.
+- **Auto-cierre a las 2 h**: si pasan 2 horas sin cambios, la sesión se confirma sola como final.
+
+**Seguimiento:**
+- **Progreso**: evolución *por ejercicio* (mejor serie + gráfico) y **volumen total por sesión**. También historial de metcons.
+- **Historial**: diario *por fecha*, con volumen, sensación y notas de cada día.
+- **Ajustes**: exportar/importar respaldo (JSON).
+
+> Sobre calorías: la app **no** estima calorías quemadas a propósito — con peso y reps ese número tiene ±30% de error. El **volumen (tonelaje)** es la métrica honesta y precisa de tu carga de trabajo.
