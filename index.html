@@ -102,7 +102,10 @@
   .prog-item .v .u{font-size:11px; color:var(--muted); font-weight:400;}
   .delta{font-size:12px; margin-left:6px;}
   .delta.up{color:var(--green);} .delta.down{color:var(--accent);}
-  canvas{width:100%; height:120px; display:block; margin-top:8px;}
+  canvas{width:100%; height:170px; display:block; margin-top:8px;}
+  .seg{display:inline-flex; background:var(--card2); border:1px solid var(--line); border-radius:20px; overflow:hidden; flex:0 0 auto;}
+  .seg button{background:none; border:none; color:var(--muted); padding:7px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .seg button.on{background:var(--accent); color:#fff;}
   .hist-row{border-top:1px solid var(--line); padding:11px 0;}
   .hist-row:first-child{border-top:none;}
   .hist-row .d{font-weight:600; font-size:14px;}
@@ -307,6 +310,7 @@ let logs   = load();
 let drafts = loadDrafts();
 let curDay = new Date().getDay(); curDay = (curDay===0?6:curDay); // Dom->6
 let curView = "today";
+let progMode = "day"; // "day" | "week" — granularidad de los gráficos de progreso
 let draft = {}; // registro en edición (referencia al borrador del día actual)
 
 function load(){ try{ return JSON.parse(localStorage.getItem(LS_KEY))||[] }catch(e){ return [] } }
@@ -605,37 +609,72 @@ setInterval(()=>{
 }, 60000);
 
 /* ============= PROGRESO ============= */
+// lunes de la semana de una fecha ISO (YYYY-MM-DD)
+function weekStart(iso){
+  const d=new Date(iso+"T00:00:00");
+  const off=(d.getDay()+6)%7; // días desde el lunes
+  d.setDate(d.getDate()-off);
+  return d.toISOString().slice(0,10);
+}
+// agrupa puntos [{date,val}] por día o semana; how = 'sum' | 'max'
+function aggregate(points, mode, how){
+  const g={};
+  points.forEach(p=>{
+    const k = mode==="week" ? weekStart(p.date) : p.date;
+    if(!(k in g)) g[k] = (how==="sum"?0:-Infinity);
+    g[k] = how==="sum" ? g[k]+p.val : Math.max(g[k], p.val);
+  });
+  return Object.keys(g).sort().map(k=>({date:k, val:g[k]}));
+}
+function setProgMode(m){ progMode=m; renderProg(); }
+
 function renderProg(){
   const v=document.getElementById("view-prog");
   const tracked = Object.values(EXMAP).filter(e=>e.track);
+  const isWk = progMode==="week";
+  const gran = isWk ? "semana" : "día";
 
-  // ---- Volumen total (tonelaje) por sesión ----
-  const volSeries = logs.map(l=>({date:l.date, val:volumeOf(l.entries)}))
-    .filter(p=>p.val>0).sort((a,b)=>a.date.localeCompare(b.date));
-  let h="";
+  // selector Día / Semana
+  let h=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <b>📊 Ver progreso por</b>
+      <div class="seg">
+        <button class="${!isWk?"on":""}" onclick="setProgMode('day')">Día</button>
+        <button class="${isWk?"on":""}" onclick="setProgMode('week')">Semana</button>
+      </div>
+    </div>
+    <div class="tiny muted" style="margin-top:6px">${isWk
+      ? "Cada punto = una semana. El volumen es el <b>acumulado de kg de la semana</b>; los levantamientos, tu mejor peso de la semana."
+      : "Cada punto = un día entrenado. El volumen es el <b>total de kg del día</b>."}</div>
+  </div>`;
+
+  // ---- Volumen (tonelaje) acumulado por día/semana ----
+  const volRaw = logs.map(l=>({date:l.date, val:volumeOf(l.entries)})).filter(p=>p.val>0);
+  const volSeries = aggregate(volRaw, progMode, "sum");
   if(volSeries.length){
     const cur=volSeries[volSeries.length-1].val, prev=volSeries.length>1?volSeries[volSeries.length-2].val:null;
     const delta=prev!==null?cur-prev:null;
     const dtxt = delta===null?"" : delta>0?`<span class="delta up">▲ +${kg(delta)}</span>` : delta<0?`<span class="delta down">▼ ${kg(delta)}</span>`:`<span class="delta muted">=</span>`;
     h+=`<div class="card">
       <div class="prog-item" style="border:none;padding-bottom:0">
-        <div><b>🏋️ Volumen por sesión</b><div class="tiny muted">Σ peso×reps · ${volSeries.length} sesiones</div></div>
+        <div><b>🏋️ Volumen por ${gran}</b><div class="tiny muted">Σ peso×reps · ${volSeries.length} ${isWk?"semanas":"días"}</div></div>
         <div class="v">${(cur||0).toLocaleString("es")}<span class="u"> kg</span>${dtxt}</div>
       </div>
       <canvas id="c_vol"></canvas>
-      <div class="tiny muted" style="margin-top:6px">La métrica más honesta de tu carga de trabajo. Si sube semana a semana, estás progresando.</div>
+      <div class="tiny muted" style="margin-top:6px">La métrica más honesta de tu carga de trabajo. Si sube, estás progresando.</div>
     </div>`;
-    setTimeout(()=>drawChart("c_vol", volSeries.map(p=>p.val)),0);
+    setTimeout(()=>drawChart("c_vol", volSeries, {zeroBased:true, unit:"kg"}),0);
   }
 
   h+=`<div class="card"><h2>📈 Tus levantamientos principales</h2>
-    <p class="small muted" style="margin-top:4px">Mejor serie por sesión. La flecha compara con la vez anterior.</p></div>`;
+    <p class="small muted" style="margin-top:4px">Mejor peso por ${gran}. La flecha compara con ${isWk?"la semana":"la vez"} anterior.</p></div>`;
 
   let any=false;
   tracked.forEach(e=>{
-    const series = logs.filter(l=>l.entries[e.id]).sort((a,b)=>a.date.localeCompare(b.date))
+    const raw = logs.filter(l=>l.entries[e.id])
       .map(l=>{ const b=bestFromEntry(l.entries[e.id]); return {date:l.date, val: e.log==="reps"? b.r : b.w }; })
       .filter(p=>p.val>0);
+    const series = aggregate(raw, progMode, "max");
     if(series.length===0) return; any=true;
     const cur=series[series.length-1].val, prev=series.length>1?series[series.length-2].val:null;
     const delta = prev!==null ? cur-prev : null;
@@ -643,12 +682,12 @@ function renderProg(){
     const cid="c_"+e.id;
     h+=`<div class="card">
       <div class="prog-item" style="border:none;padding-bottom:0">
-        <div><b>${e.name}</b><div class="tiny muted">${e.scheme} · ${series.length} sesiones</div></div>
+        <div><b>${e.name}</b><div class="tiny muted">${e.scheme} · ${series.length} ${isWk?"semanas":"sesiones"}</div></div>
         <div class="v">${round(cur)}<span class="u"> ${e.unit||"kg"}</span>${dtxt}</div>
       </div>
       <canvas id="${cid}"></canvas>
     </div>`;
-    setTimeout(()=>drawChart(cid, series.map(p=>p.val)),0);
+    setTimeout(()=>drawChart(cid, series, {unit:e.unit||"kg"}),0);
   });
   if(!any) h+=`<div class="empty">Todavía no hay datos de fuerza.<br>Registrá tu primera sesión y volvé acá. 💪</div>`;
 
@@ -668,21 +707,50 @@ function renderProg(){
   v.innerHTML=h;
 }
 function round(n){ return Math.round(n*10)/10; }
-function drawChart(id, data){
-  const c=document.getElementById(id); if(!c) return;
-  const dpr=window.devicePixelRatio||1; const W=c.clientWidth, H=120;
+function niceNum(n){ return n>=1000 ? Math.round(n/10)*10 : Math.round(n*10)/10; }
+// points: [{date:'YYYY-MM-DD', val:Number}] · opts: {zeroBased, unit}
+function drawChart(id, points, opts){
+  opts=opts||{};
+  const c=document.getElementById(id); if(!c||!points||!points.length) return;
+  const dpr=window.devicePixelRatio||1, W=c.clientWidth, H=170;
   c.width=W*dpr; c.height=H*dpr; const ctx=c.getContext("2d"); ctx.scale(dpr,dpr);
-  const pad=18, min=Math.min(...data), max=Math.max(...data), rng=(max-min)||1;
-  const x=i=> data.length<=1? W/2 : pad+i*(W-2*pad)/(data.length-1);
-  const y=val=> H-pad-(val-min)/rng*(H-2*pad);
-  // línea
-  ctx.strokeStyle="#ff5a3c"; ctx.lineWidth=2.5; ctx.beginPath();
-  data.forEach((v,i)=>{ i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)); }); ctx.stroke();
-  // relleno
-  ctx.lineTo(x(data.length-1),H-pad); ctx.lineTo(x(0),H-pad); ctx.closePath();
+  const vals=points.map(p=>p.val);
+  let min=Math.min(...vals), max=Math.max(...vals);
+  if(opts.zeroBased) min=0;
+  if(min===max){ max=max+ (max||1)*0.1; min=opts.zeroBased?0:min-(min||1)*0.1; }
+  const padL=44, padR=12, padT=12, padB=24;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const x=i=> points.length<=1 ? padL+plotW/2 : padL + i*plotW/(points.length-1);
+  const y=val=> padT + plotH - (val-min)/(max-min)*plotH;
+  const MUT="#8b93a3", GRID="#2a2f3a", ACC="#ff5a3c";
+  ctx.font="10px -apple-system,sans-serif";
+
+  // grid + labels eje Y (valores absolutos)
+  const N=4;
+  ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let i=0;i<=N;i++){
+    const val=min+(max-min)*i/N, yy=y(val);
+    ctx.strokeStyle=GRID; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(padL,yy); ctx.lineTo(W-padR,yy); ctx.stroke();
+    ctx.fillStyle=MUT; ctx.fillText(niceNum(val).toLocaleString("es"), padL-6, yy);
+  }
+
+  // relleno + línea
+  ctx.beginPath(); points.forEach((p,i)=>{ i?ctx.lineTo(x(i),y(p.val)):ctx.moveTo(x(i),y(p.val)); });
+  ctx.lineTo(x(points.length-1),padT+plotH); ctx.lineTo(x(0),padT+plotH); ctx.closePath();
   ctx.fillStyle="rgba(255,90,60,.10)"; ctx.fill();
-  // puntos
-  data.forEach((v,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(v),3.2,0,7); ctx.fillStyle="#ff5a3c"; ctx.fill(); });
+  ctx.strokeStyle=ACC; ctx.lineWidth=2.5; ctx.beginPath();
+  points.forEach((p,i)=>{ i?ctx.lineTo(x(i),y(p.val)):ctx.moveTo(x(i),y(p.val)); }); ctx.stroke();
+  points.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(p.val),3,0,7); ctx.fillStyle=ACC; ctx.fill(); });
+
+  // labels eje X (fechas): primero, último y algunos intermedios
+  ctx.fillStyle=MUT; ctx.textBaseline="top"; ctx.textAlign="center";
+  const maxLbl = Math.max(2, Math.floor(plotW/56));
+  const step = points.length<=maxLbl ? 1 : Math.ceil((points.length-1)/(maxLbl-1));
+  points.forEach((p,i)=>{
+    if(i%step!==0 && i!==points.length-1) return;
+    let px=x(i); px=Math.max(padL+12, Math.min(W-padR-12, px));
+    ctx.fillText(fmtDate(p.date), px, padT+plotH+6);
+  });
 }
 
 /* ============= HISTORIAL ============= */
