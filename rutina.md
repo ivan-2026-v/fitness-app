@@ -35,16 +35,24 @@ La carga lumbar pesada (Squat día 1, Hinge día 4) queda **separada 3 días** p
 
 ---
 
-## 📈 Reglas de progresión (progressive overload sin lastimarse)
+## 📈 Reglas de progresión — Doble progresión (reps primero, peso después)
 
-**Fuerza principal (5×5 / 4×6):**
-- Completás todas las series con técnica limpia y RPE ≤ 8 → **+2.5 kg tren superior / +2.5–5 kg tren inferior** la próxima sesión.
-- Fallás reps 2 sesiones seguidas → mantené el peso o bajá 5% y reconstruí.
-- **RPE**: dejá siempre 1-2 reps en reserva en el trabajo pesado. No buscamos el fallo.
+**El método (lo que calcula el "🎯 Recomendado" de la app):**
+Cada ejercicio tiene un **rango de reps** (ej: fuerza 5–8, accesorios 8–12). Mantenés el peso y **subís 1 rep por semana** hasta llegar al tope del rango en **todas** las series. Recién ahí **subís el peso** (incremento chico) y volvés al piso del rango. Así te ganás la carga demostrando control primero — más seguro para espalda/isquio.
+
+| Situación | Qué hace la app |
+|-----------|-----------------|
+| Sin historial | Sugiere peso de arranque × piso del rango |
+| Dentro del rango | Mismo peso, +1 rep por serie |
+| Tope del rango en todas las series | +incremento de peso, reset al piso |
+| Molestia anotada o sensación "al límite" | **Mantener** (freno de seguridad) |
+| Cada 4 semanas | **Deload** general −10% (manual) |
+
+**Incrementos:** +2.5 kg tren superior · +2.5–5 kg tren inferior · 1.25–2.5 kg accesorios. **RPE**: dejá 1-2 reps en reserva en el trabajo pesado, no buscamos el fallo.
+
+**Pull-up (base actual: 5 estrictas × 10 series):** progresás por reps (5→8 por serie) → luego **con lastre** (mochila/disco 5-10 kg) → luego **chest-to-bar**. Test cada 3-4 semanas. Objetivo semestral: 10 estrictas seguidas y primeras C2B.
 
 **Deload cada 4 semanas:** -10% de carga y volumen, semana de calidad técnica. Innegociable — es lo que sostiene el progreso a largo plazo.
-
-**Pull-up (base actual: 5 estrictas × 10 series):** ahora progresás hacia (a) más reps por serie (5→8→10 estrictas seguidas), (b) **pull-ups con lastre** (mochila/disco 5-10 kg) cuando hagas 8+ limpias, (c) **chest-to-bar**. **Test cada 3-4 semanas.** Objetivo semestral: 10 estrictas seguidas y primeras C2B.
 
 **Bisagra de cadera (RDL/Deadlift):** la técnica y la espalda **sin dolor** mandan SIEMPRE sobre el número. Arrancás en RDL liviano-moderado; progresás a peso muerto convencional solo cuando la espalda esté sólida varias semanas. Si la espalda baja avisa → parás ese día.
 

@@ -49,6 +49,11 @@
   .ex .scheme{font-size:12px; color:var(--accent2); font-weight:600;}
   .ex .hint{font-size:12px; color:var(--muted); margin-top:3px;}
   .ex .last{font-size:12px; color:var(--yellow); margin-top:4px;}
+  .rec{font-size:13px; margin-top:8px; padding:9px 11px; border-radius:10px; border:1px solid var(--line); background:var(--card2); line-height:1.35;}
+  .rec.up{background:rgba(57,217,138,.12); border-color:rgba(57,217,138,.35);}
+  .rec.reps{background:rgba(60,166,255,.10); border-color:rgba(60,166,255,.30);}
+  .rec.hold{background:rgba(255,203,69,.12); border-color:rgba(255,203,69,.38);}
+  .rec.start{background:rgba(255,90,60,.10); border-color:rgba(255,90,60,.30);}
   a.demo{display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--accent2);
     text-decoration:none; background:rgba(60,166,255,.12); border:1px solid rgba(60,166,255,.3);
     padding:5px 10px; border-radius:20px; margin-top:7px; font-weight:600;}
@@ -367,6 +372,63 @@ function movesHtml(e){
   }</div>`;
 }
 
+/* ====== MOTOR DE PROGRESIÓN (doble progresión conservadora) ======
+   Por ejercicio: rango de reps [min,max], incremento de peso (kg), peso de arranque.
+   Regla: subís reps al mismo peso hasta el tope del rango en todas las series;
+   ahí subís peso y volvés al piso. Freno automático ante molestia o sensación "al límite". */
+const PROG = {
+  // Fuerza pesada (rango bajo, sube el peso al llegar al tope)
+  back_squat:{min:5,max:8,inc:2.5,start:50},
+  bench:{min:5,max:8,inc:2.5,start:55},
+  strict_press:{min:4,max:6,inc:2.5,start:30},
+  bb_row:{min:6,max:10,inc:2.5,start:40},
+  rdl:{min:6,max:8,inc:2.5,start:40},
+  front_squat:{min:5,max:7,inc:2.5,start:40},
+  // Hipertrofia / accesorio (rango alto, prioriza reps)
+  dips:{min:8,max:12,inc:2.5,start:0},
+  curl:{min:8,max:12,inc:2.5,start:12},
+  tri:{min:8,max:12,inc:2.5,start:12},
+  lateral:{min:12,max:15,inc:1.25,start:8},
+  legpress:{min:10,max:15,inc:5,start:80},
+  latpull:{min:8,max:12,inc:2.5,start:40},
+  chestpress:{min:8,max:12,inc:2.5,start:40},
+  legcurl:{min:8,max:12,inc:2.5,start:30},
+  hipthrust:{min:8,max:12,inc:5,start:40},
+  facepull:{min:12,max:15,inc:1.25,start:15},
+  // Gimnástico / peso corporal (sube reps → luego lastre)
+  pullup_work:{min:5,max:8,inc:0,start:5,bw:true}
+};
+function schemeText(e){ const p=PROG[e.id]; return (p&&e.sets)? `${e.sets}×${p.min}-${p.max}` : (e.scheme||""); }
+
+// Recomendación del día para un ejercicio, en base a su última sesión.
+function recommend(e){
+  const p=PROG[e.id]; if(!p) return null;
+  const unit=e.unit||"kg";
+  const last=lastLogFor(e.id, todayISO());
+
+  // Peso corporal (dominadas): progresa por reps, luego lastre
+  if(p.bw || e.log==="reps"){
+    const sets=last ? (last.entries[e.id].sets||[]).filter(s=>+s.r>0).map(s=>+s.r) : [];
+    if(!sets.length) return {tone:"start", text:`🎯 <b>Objetivo hoy:</b> ${p.start} reps por serie. Foco en técnica.`};
+    const mn=Math.min(...sets);
+    if(mn>=p.max) return {tone:"up", text:`🎯 <b>¡Dominás ${p.max} reps!</b> Sumá lastre (mochila/disco 5 kg) o apuntá a chest-to-bar.`};
+    return {tone:"reps", text:`🎯 <b>Objetivo hoy:</b> ${Math.min(mn+1,p.max)} reps por serie (la última vez tu peor serie fue ${mn}).`};
+  }
+
+  // Fuerza / accesorio con peso
+  if(!last) return {tone:"start", text:`🎯 <b>Arrancá con ${p.start} ${unit} × ${p.min} reps.</b> Foco en técnica.`};
+  const sets=(last.entries[e.id].sets||[]).filter(s=>(+s.w>0)||(+s.r>0));
+  if(!sets.length) return {tone:"start", text:`🎯 <b>Arrancá con ${p.start} ${unit} × ${p.min} reps.</b>`};
+  const w=Math.max(...sets.map(s=>+s.w||0));                // peso de trabajo
+  const mn=Math.min(...sets.filter(s=>(+s.w||0)===w).map(s=>+s.r||0)); // peor serie a ese peso
+
+  const pain=/dolor|molest|tir[oó]n|isquio|lumbar|espalda|rodilla|hombro/i.test(last.notes||"");
+  if(pain)          return {tone:"hold", text:`🎯 <b>Mantené ${w} ${unit}.</b> La última vez anotaste molestia — consolidá sin subir carga.`};
+  if(last.feel===5) return {tone:"hold", text:`🎯 <b>Mantené ${w} ${unit} × ${mn}.</b> Fue "al límite"; afianzá antes de subir.`};
+  if(mn>=p.max)     return {tone:"up",   text:`🎯 <b>¡Completaste el rango!</b> Subí a ${round(w+p.inc)} ${unit} y volvé a ${p.min} reps.`};
+  return {tone:"reps", text:`🎯 <b>Mismo peso (${w} ${unit})</b>, apuntá a ${Math.min(mn+1,p.max)} reps por serie (tope ${p.max}, ahí subís peso).`};
+}
+
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function fmtDate(iso){ const p=(iso||"").split("-"); return p.length===3 ? p[2]+"/"+p[1] : iso; }
 function lastLogFor(exId, beforeDate){
@@ -501,12 +563,14 @@ function renderEx(e){
     body=`<label class="small" style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer">
       <input type="checkbox" style="width:20px;height:20px" data-ex="${e.id}" data-k="done" ${checked}> Completado</label>`;
   }
+  const rec=recommend(e);
   return `<div class="ex">
     <div style="display:flex;justify-content:space-between;align-items:baseline">
-      <span class="name">${e.name}</span><span class="scheme">${e.scheme||""}</span></div>
+      <span class="name">${e.name}</span><span class="scheme">${schemeText(e)}</span></div>
     ${e.hint?`<div class="hint">${e.hint}</div>`:""}
     ${(e.log==="sets"||e.log==="reps"||e.log==="check")?`<div><a class="demo" href="${demoUrl(e)}" target="_blank" rel="noopener">👁 Ver técnica (fotos)</a></div>`:""}
     ${lastTxt?`<div class="last">↳ ${lastTxt}</div>`:""}
+    ${rec?`<div class="rec ${rec.tone}">${rec.text}</div>`:""}
     ${body}
     ${e.coach?`<div class="coach">${e.coach}</div>`:""}
   </div>`;
@@ -682,7 +746,7 @@ function renderProg(){
     const cid="c_"+e.id;
     h+=`<div class="card">
       <div class="prog-item" style="border:none;padding-bottom:0">
-        <div><b>${e.name}</b><div class="tiny muted">${e.scheme} · ${series.length} ${isWk?"semanas":"sesiones"}</div></div>
+        <div><b>${e.name}</b><div class="tiny muted">${schemeText(e)} · ${series.length} ${isWk?"semanas":"sesiones"}</div></div>
         <div class="v">${round(cur)}<span class="u"> ${e.unit||"kg"}</span>${dtxt}</div>
       </div>
       <canvas id="${cid}"></canvas>
@@ -795,9 +859,19 @@ function renderSet(){
       <input id="imp" type="file" accept="application/json" class="hide" onchange="importData(event)">
       <button class="btn2 danger" onclick="wipe()">🗑️ Borrar todos los datos</button>
     </div>
-    <div class="card"><h2>📋 El plan</h2>
-      <p class="small muted" style="margin-top:6px">Fuerza y masa magra · 6 días · Bloque 1 fuerza / Bloque 2 metcon / Bloque 3 accesorio-prehab-movilidad.</p>
-      <div class="coach">Regla de oro: técnica &gt; número, constancia &gt; picos. La espalda y el isquio mandan sobre el ego. Deload cada 4 semanas.</div>
+    <div class="card"><h2>🎯 Objetivos</h2>
+      <p class="small" style="margin-top:6px"><b>Principal:</b> fuerza y masa magra. <b>Cuidado activo:</b> espalda baja e isquiotibial (progresar la bisagra de cadera con paciencia). <b>Motor aeróbico:</b> ya es fuerte — se mantiene, no es el foco.</p>
+      <p class="small muted" style="margin-top:6px">6 días · Bloque 1 fuerza · Bloque 2 metcon · Bloque 3 accesorio/prehab/movilidad.</p>
+    </div>
+    <div class="card"><h2>📈 Cómo funciona el "🎯 Recomendado"</h2>
+      <p class="small" style="margin-top:6px"><b>Doble progresión:</b> cada ejercicio tiene un rango de reps (ej: 5–8). Subís reps al mismo peso hasta llegar al tope en todas las series; recién ahí subís peso y volvés al piso del rango.</p>
+      <div style="margin-top:8px" class="small">
+        <div class="rec reps" style="margin:4px 0">Azul · <b>Sumá reps</b> al mismo peso</div>
+        <div class="rec up" style="margin:4px 0">Verde · <b>¡Subí el peso!</b> completaste el rango</div>
+        <div class="rec hold" style="margin:4px 0">Amarillo · <b>Mantené</b> (molestia o "al límite")</div>
+        <div class="rec start" style="margin:4px 0">Naranja · <b>Arranque</b> sugerido (sin historial)</div>
+      </div>
+      <div class="coach" style="margin-top:8px">Reglas de oro: técnica &gt; número, constancia &gt; picos. La espalda y el isquio mandan sobre el ego. <b>Nunca en frío. Deload cada 4 semanas.</b></div>
     </div>`;
 }
 function exportData(){

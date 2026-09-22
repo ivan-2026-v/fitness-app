@@ -12,6 +12,7 @@ App personal de entrenamiento + plan de fuerza y masa magra (6 días/semana).
 
 ## Funciones de la app
 
+- **🎯 Recomendado por ejercicio** (doble progresión): la app sugiere el peso/reps del día en base a tu última sesión — sumar reps, subir peso al completar el rango, o mantener si hubo molestia.
 - **Registro por serie** (peso × reps) con el **detalle serie por serie de la última vez** para saber qué superar.
 - **Metcons** con resultado + RPE; **sensación y notas** por sesión.
 - **"👁 Ver técnica"**: fotos de cada ejercicio y de cada movimiento del metcon.
